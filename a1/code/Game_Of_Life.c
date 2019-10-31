@@ -107,7 +107,7 @@ void free_array(int **array, int N) {
 }
 
 void init_random(int **array1, int **array2, int N) {
-    int i, pos, x, y;
+    int i, pos;
 
     for (i = 0; i < (N * N) / 10; i++) {
         pos = rand() % ((N - 2) * (N - 2));
