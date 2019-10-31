@@ -1,12 +1,11 @@
 #!/bin/bash
 
-#PBS -N makejob
+#PBS -N make
+#PBS -o make.out
+#PBS -e make.err
+#PBS -l nodes=1:ppn=1
+#PBS -l walltime=00:10:00
 
-#PBS -o makejob.out
-#PBS -e makejob.err
-
-#PBS -l nodes=1
-
+module load openmp
 cd /home/parallel/parlab02/pps/lab1/ask1
 make
-
