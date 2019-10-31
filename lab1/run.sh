@@ -3,7 +3,6 @@
 ## Give the Job a descriptive name
 #PBS -N runjob
 
-## Output and error files
 #PBS -o runjob.out
 #PBS -e runjob.err
 
