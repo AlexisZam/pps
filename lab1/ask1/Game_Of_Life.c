@@ -58,7 +58,7 @@ int main(int argc, char *argv[]) {
 
     gettimeofday(&ts, NULL);
     for (t = 0; t < T; t++) {
-#pragma omp parallel for private(i, j, nbrs) shared(N, previous, current)
+#pragma omp parallel for private(i, j, nbrs) shared(N, current, previous)
         for (i = 1; i < N - 1; i++)
             for (j = 1; j < N - 1; j++) {
                 nbrs = previous[i + 1][j + 1] + previous[i + 1][j] + previous[i + 1][j - 1] + previous[i][j - 1] + previous[i][j + 1] + previous[i - 1][j - 1] + previous[i - 1][j] + previous[i - 1][j + 1];
@@ -85,6 +85,7 @@ int main(int argc, char *argv[]) {
 #ifdef OUTPUT
     system(FINALIZE);
 #endif
+    return 0;
 }
 
 int **allocate_array(int N) {
