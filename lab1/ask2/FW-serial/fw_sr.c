@@ -40,6 +40,8 @@ int main(int argc, char **argv) {
     graph_init_random(A, -1, N, 128 * N);
 
     gettimeofday(&t1, 0);
+#pragma omp parallel default(none) shared(A, B, N)
+#pragma omp single
     FW_SR(A, 0, 0, A, 0, 0, A, 0, 0, N, B);
     gettimeofday(&t2, 0);
 
@@ -73,19 +75,18 @@ void FW_SR(int **A, int arow, int acol,
             for (i = 0; i < myN; i++)
                 for (j = 0; j < myN; j++)
                     A[arow + i][acol + j] = min(A[arow + i][acol + j], B[brow + i][bcol + k] + C[crow + k][ccol + j]);
-    else
-#pragma omp parallel
-#pragma omp single
-    {
+    else {
         FW_SR(A, arow, acol, B, brow, bcol, C, crow, ccol, myN / 2, bsize);
 #pragma omp task
         FW_SR(A, arow, acol + myN / 2, B, brow, bcol, C, crow, ccol + myN / 2, myN / 2, bsize);
+#pragma omp task
         FW_SR(A, arow + myN / 2, acol, B, brow + myN / 2, bcol, C, crow, ccol, myN / 2, bsize);
 #pragma omp taskwait
         FW_SR(A, arow + myN / 2, acol + myN / 2, B, brow + myN / 2, bcol, C, crow, ccol + myN / 2, myN / 2, bsize);
         FW_SR(A, arow + myN / 2, acol + myN / 2, B, brow + myN / 2, bcol + myN / 2, C, crow + myN / 2, ccol + myN / 2, myN / 2, bsize);
 #pragma omp task
         FW_SR(A, arow + myN / 2, acol, B, brow + myN / 2, bcol + myN / 2, C, crow + myN / 2, ccol, myN / 2, bsize);
+#pragma omp task
         FW_SR(A, arow, acol + myN / 2, B, brow, bcol + myN / 2, C, crow + myN / 2, ccol + myN / 2, myN / 2, bsize);
 #pragma omp taskwait
         FW_SR(A, arow, acol, B, brow, bcol + myN / 2, C, crow + myN / 2, ccol, myN / 2, bsize);

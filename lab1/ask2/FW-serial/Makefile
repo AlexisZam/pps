@@ -1,24 +1,24 @@
-.phony: all clean
+.PHONY: all clean
 
-all: fw fw_sr fw_tiled 
+all: fw fw_sr fw_tiled
 
-CC=gcc
-CFLAGS= -Wall -O3 -Wno-unused-variable
+CC = gcc
+CFLAGS = -fopenmp -O3 -Wall
 
-HDEPS+=%.h
+HDEPS += %.h
 
-OBJS=util.o
+OBJS = util.o
 
-fw: $(OBJS) fw.c 
-	$(CC) $(OBJS) fw.c -o fw $(CFLAGS)
+fw: $(OBJS) fw.c
+	$(CC) $(CFLAGS) $(OBJS) fw.c -o fw
 fw_sr: fw_sr.c 
-	$(CC) $(OBJS) fw_sr.c -o fw_sr $(CFLAGS)
+	$(CC) $(CFLAGS) $(OBJS) fw_sr.c -o fw_sr
 fw_tiled: fw_tiled.c 
-	$(CC) $(OBJS) fw_tiled.c -o fw_tiled $(CFLAGS)
+	$(CC) $(CFLAGS) $(OBJS) fw_tiled.c -o fw_tiled
 
 %.o: %.c $(HDEPS)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -f *.o fw fw_sr fw_tiled 
+	$(RM) *.o fw fw_sr fw_tiled
 

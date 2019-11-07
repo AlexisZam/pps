@@ -1,7 +1,12 @@
+.PHONY: all clean
+
 all: Game_Of_Life
 
-Game_Of_Life: Game_Of_Life.c
-	gcc -fopenmp -O3 -Wall -o Game_Of_Life Game_Of_Life.c
+CC = gcc
+CFLAGS = -fopenmp -O3 -Wall
 
+Game_Of_Life: Game_Of_Life.c
+	$(CC) $(CFLAGS) -o Game_Of_Life Game_Of_Life.c
+	
 clean: 
-	rm -f Game_Of_Life
+	$(RM) Game_Of_Life
