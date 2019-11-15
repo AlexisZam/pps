@@ -12,8 +12,5 @@ for OMP_NUM_THREADS in 1 2 4 8 16 32 64
 do
     export OMP_NUM_THREADS=$OMP_NUM_THREADS
     echo Number of threads: $OMP_NUM_THREADS
-    for N in 1024 2048 4096
-    do
-        ./fw_tiled $N 32
-    done
+    ./fw_tiled 1024 32
 done
