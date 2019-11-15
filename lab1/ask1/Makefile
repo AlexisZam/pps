@@ -7,6 +7,6 @@ all: Game_Of_Life
 
 Game_Of_Life: Game_Of_Life.c
 	$(CC) $(CFLAGS) -o Game_Of_Life Game_Of_Life.c
-	
-clean: 
+
+clean:
 	$(RM) Game_Of_Life

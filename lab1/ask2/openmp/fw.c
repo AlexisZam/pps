@@ -41,9 +41,9 @@ int main(int argc, char **argv) {
     time = (double)((t2.tv_sec - t1.tv_sec) * 1000000 + t2.tv_usec - t1.tv_usec) / 1000000;
     printf("FW,%d,%.4f\n", N, time);
 
-    //  for (i = 0; i < N; i++)
-    //      for (j = 0; j < N; j++)
-    //          fprintf(stdout, "%d\n", A[i][j]);
+    // for (i = 0; i < N; i++)
+    //     for (j = 0; j < N; j++)
+    //         fprintf(stdout, "%d\n", A[i][j]);
 
     return 0;
 }
