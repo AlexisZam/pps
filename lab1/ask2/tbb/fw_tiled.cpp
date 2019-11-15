@@ -5,6 +5,7 @@
   B = size of tile
   works only when N is a multiple of B
 */
+#include "tbb/task_group.h"
 #include "util.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -37,48 +38,39 @@ int main(int argc, char **argv) {
 
     gettimeofday(&t1, 0);
 
-#pragma omp parallel default(none) shared(A, i, j, k, B, N)
-#pragma omp single
     for (k = 0; k < N; k += B) {
         FW(A, k, k, k, B);
 
+        tbb::task_group g;
         for (i = 0; i < k; i += B)
-#pragma omp task
-            FW(A, k, i, k, B);
+            g.run([&] { FW(A, k, i, k, B); });
 
         for (i = k + B; i < N; i += B)
-#pragma omp task
-            FW(A, k, i, k, B);
+            g.run([&] { FW(A, k, i, k, B); });
 
         for (j = 0; j < k; j += B)
-#pragma omp task
-            FW(A, k, k, j, B);
+            g.run([&] { FW(A, k, k, j, B); });
 
         for (j = k + B; j < N; j += B)
-#pragma omp task
-            FW(A, k, k, j, B);
-#pragma omp taskwait
+            g.run([&] { FW(A, k, k, j, B); });
+        g.wait();
 
         for (i = 0; i < k; i += B)
             for (j = 0; j < k; j += B)
-#pragma omp task
-                FW(A, k, i, j, B);
+                g.run([&] { FW(A, k, i, j, B); });
 
         for (i = 0; i < k; i += B)
             for (j = k + B; j < N; j += B)
-#pragma omp task
-                FW(A, k, i, j, B);
+                g.run([&] { FW(A, k, i, j, B); });
 
         for (i = k + B; i < N; i += B)
             for (j = 0; j < k; j += B)
-#pragma omp task
-                FW(A, k, i, j, B);
+                g.run([&] { FW(A, k, i, j, B); });
 
         for (i = k + B; i < N; i += B)
             for (j = k + B; j < N; j += B)
-#pragma omp task
-                FW(A, k, i, j, B);
-#pragma omp taskwait
+                g.run([&] { FW(A, k, i, j, B); });
+        g.wait();
     }
     gettimeofday(&t2, 0);
 

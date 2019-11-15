@@ -34,7 +34,7 @@ int main(int argc, char **argv) {
     for (k = 0; k < N; k++)
         tbb::parallel_for(
             tbb::blocked_range<size_t>(0, N),
-            [=](const tbb::blocked_range<size_t> &r) {
+            [&](const tbb::blocked_range<size_t> &r) {
                 for (size_t i = r.begin(); i != r.end(); ++i)
                     for (int j = 0; j < N; j++)
                         A[i][j] = min(A[i][j], A[i][k] + A[k][j]);
