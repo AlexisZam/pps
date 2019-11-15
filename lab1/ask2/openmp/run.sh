@@ -1,8 +1,8 @@
 #!/bin/bash
 
-#PBS -N run
-#PBS -o run.out
-#PBS -e run.err
+#PBS -N run-fw_tiled-4096
+#PBS -o run-fw_tiled-4096
+#PBS -e run-fw_tiled-4096
 #PBS -l nodes=sandman:ppn=64
 #PBS -l walltime=00:10:00
 
@@ -14,6 +14,6 @@ do
     echo Number of threads: $OMP_NUM_THREADS
     for N in 1024 2048 4096
     do
-        ./fw $N
+        ./fw_tiled $N 4096
     done
 done

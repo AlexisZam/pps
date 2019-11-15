@@ -59,22 +59,22 @@ int main(int argc, char **argv) {
         for (j = k + B; j < N; j += B)
             FW(A, k, k, j, B);
 
-#pragma omp for nowait private(j)
+#pragma omp for nowait collapse(2)
         for (i = 0; i < k; i += B)
             for (j = 0; j < k; j += B)
                 FW(A, k, i, j, B);
 
-#pragma omp for nowait private(j)
+#pragma omp for nowait collapse(2)
         for (i = 0; i < k; i += B)
             for (j = k + B; j < N; j += B)
                 FW(A, k, i, j, B);
 
-#pragma omp for nowait private(j)
+#pragma omp for nowait collapse(2)
         for (i = k + B; i < N; i += B)
             for (j = 0; j < k; j += B)
                 FW(A, k, i, j, B);
 
-#pragma omp for private(j)
+#pragma omp for collapse(2)
         for (i = k + B; i < N; i += B)
             for (j = k + B; j < N; j += B)
                 FW(A, k, i, j, B);
