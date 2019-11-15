@@ -1,8 +1,6 @@
 CXX = gcc
 CXXFLAGS = -O3 -Wall
-
 HDEPS += %.h
-
 OBJS = util.o
 
 .PHONY: all clean
@@ -10,11 +8,11 @@ OBJS = util.o
 all: fw fw_sr fw_tiled
 
 fw: $(OBJS) fw.cpp
-	$(CXX) $(CXXFLAGS) $(OBJS) fw.cpp -o fw
+	$(CXX) $(CXXFLAGS) -o fw $(OBJS) fw.cpp
 fw_sr: fw_sr.cpp
-	$(CXX) $(CXXFLAGS) $(OBJS) fw_sr.cpp -o fw_sr
+	$(CXX) $(CXXFLAGS) -o fw_sr $(OBJS) fw_sr.cpp
 fw_tiled: fw_tiled.cpp
-	$(CXX) $(CXXFLAGS) $(OBJS) fw_tiled.cpp -o fw_tiled
+	$(CXX) $(CXXFLAGS) -o fw_tiled $(OBJS) fw_tiled.cpp
 
 %.o: %.cpp $(HDEPS)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
