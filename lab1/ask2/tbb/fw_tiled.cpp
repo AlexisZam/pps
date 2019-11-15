@@ -43,33 +43,33 @@ int main(int argc, char **argv) {
 
         tbb::task_group g;
         for (i = 0; i < k; i += B)
-            g.run([&] { FW(A, k, i, k, B); });
+            g.run([=] { FW(A, k, i, k, B); });
 
         for (i = k + B; i < N; i += B)
-            g.run([&] { FW(A, k, i, k, B); });
+            g.run([=] { FW(A, k, i, k, B); });
 
         for (j = 0; j < k; j += B)
-            g.run([&] { FW(A, k, k, j, B); });
+            g.run([=] { FW(A, k, k, j, B); });
 
         for (j = k + B; j < N; j += B)
-            g.run([&] { FW(A, k, k, j, B); });
+            g.run([=] { FW(A, k, k, j, B); });
         g.wait();
 
         for (i = 0; i < k; i += B)
             for (j = 0; j < k; j += B)
-                g.run([&] { FW(A, k, i, j, B); });
+                g.run([=] { FW(A, k, i, j, B); });
 
         for (i = 0; i < k; i += B)
             for (j = k + B; j < N; j += B)
-                g.run([&] { FW(A, k, i, j, B); });
+                g.run([=] { FW(A, k, i, j, B); });
 
         for (i = k + B; i < N; i += B)
             for (j = 0; j < k; j += B)
-                g.run([&] { FW(A, k, i, j, B); });
+                g.run([=] { FW(A, k, i, j, B); });
 
         for (i = k + B; i < N; i += B)
             for (j = k + B; j < N; j += B)
-                g.run([&] { FW(A, k, i, j, B); });
+                g.run([=] { FW(A, k, i, j, B); });
         g.wait();
     }
     gettimeofday(&t2, 0);
