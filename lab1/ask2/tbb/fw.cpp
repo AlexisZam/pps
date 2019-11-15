@@ -2,6 +2,7 @@
  Standard implementation of the Floyd-Warshall Algorithm
 */
 
+#include "tbb/parallel_for.h"
 #include "util.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,19 +32,22 @@ int main(int argc, char **argv) {
 
     gettimeofday(&t1, 0);
     for (k = 0; k < N; k++)
-#pragma omp parallel for default(none) private(j) shared(A, k, N)
-        for (i = 0; i < N; i++)
-            for (j = 0; j < N; j++)
-                A[i][j] = min(A[i][j], A[i][k] + A[k][j]);
+        tbb::parallel_for(
+            tbb::blocked_range<size_t>(0, N),
+            [=](const tbb::blocked_range<size_t> &r) {
+                for (size_t i = r.begin(); i != r.end(); ++i)
+                    for (int j = 0; j < N; j++)
+                        A[i][j] = min(A[i][j], A[i][k] + A[k][j]);
+            });
 
     gettimeofday(&t2, 0);
 
     time = (double)((t2.tv_sec - t1.tv_sec) * 1000000 + t2.tv_usec - t1.tv_usec) / 1000000;
     printf("FW,%d,%.4f\n", N, time);
 
-    //  for (i = 0; i < N; i++)
-    //      for (j = 0; j < N; j++)
-    //          fprintf(stdout, "%d\n", A[i][j]);
+    // for (i = 0; i < N; i++)
+    //     for (j = 0; j < N; j++)
+    //         fprintf(stdout, "%d\n", A[i][j]);
 
     return 0;
 }
