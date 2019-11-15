@@ -41,7 +41,7 @@ int main(int argc, char **argv) {
 
     gettimeofday(&t1, 0);
 #pragma omp parallel default(none) shared(A, B, N)
-#pragma omp single
+#pragma omp master
     FW_SR(A, 0, 0, A, 0, 0, A, 0, 0, N, B);
     gettimeofday(&t2, 0);
 
