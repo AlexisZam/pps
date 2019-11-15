@@ -37,57 +37,56 @@ int main(int argc, char **argv) {
 
     gettimeofday(&t1, 0);
 
-#pragma omp parallel default(none) shared(A, i, j, k, B, N)
-#pragma omp master
-    for (k = 0; k < N; k += B) {
+    for (k = 0; k < N; k += B)
+#pragma omp parallel default(none) shared(A, k, B, N)
+    {
+#pragma omp single
         FW(A, k, k, k, B);
 
+#pragma omp for nowait
         for (i = 0; i < k; i += B)
-#pragma omp task
             FW(A, k, i, k, B);
 
+#pragma omp for nowait
         for (i = k + B; i < N; i += B)
-#pragma omp task
             FW(A, k, i, k, B);
 
+#pragma omp for nowait
         for (j = 0; j < k; j += B)
-#pragma omp task
             FW(A, k, k, j, B);
 
+#pragma omp for
         for (j = k + B; j < N; j += B)
-#pragma omp task
             FW(A, k, k, j, B);
-#pragma omp taskwait
 
+#pragma omp for private(j) nowait
         for (i = 0; i < k; i += B)
             for (j = 0; j < k; j += B)
-#pragma omp task
                 FW(A, k, i, j, B);
 
+#pragma omp for private(j) nowait
         for (i = 0; i < k; i += B)
             for (j = k + B; j < N; j += B)
-#pragma omp task
                 FW(A, k, i, j, B);
 
+#pragma omp for private(j) nowait
         for (i = k + B; i < N; i += B)
             for (j = 0; j < k; j += B)
-#pragma omp task
                 FW(A, k, i, j, B);
 
+#pragma omp for private(j)
         for (i = k + B; i < N; i += B)
             for (j = k + B; j < N; j += B)
-#pragma omp task
                 FW(A, k, i, j, B);
-#pragma omp taskwait
     }
     gettimeofday(&t2, 0);
 
     time = (double)((t2.tv_sec - t1.tv_sec) * 1000000 + t2.tv_usec - t1.tv_usec) / 1000000;
     printf("FW_TILED,%d,%d,%.4f\n", N, B, time);
 
-    // for (i = 0; i < N; i++)
-    //     for (j = 0; j < N; j++)
-    //         fprintf(stdout, "%d\n", A[i][j]);
+    for (i = 0; i < N; i++)
+        for (j = 0; j < N; j++)
+            fprintf(stdout, "%d\n", A[i][j]);
 
     return 0;
 }
