@@ -5,7 +5,7 @@
 #include <sys/time.h>
 
 void graph_init_random(int **adjm, int seed, int n, int m) {
-    unsigned int i, j;
+    int i, j;
 
     srand48(seed);
     for (i = 0; i < n; i++)
