@@ -1,13 +1,13 @@
-.PHONY: all clean
-
-all: fw fw_sr fw_tiled
-
 CC = gcc
 CFLAGS = -fopenmp -O3 -Wall
 
 HDEPS += %.h
 
 OBJS = util.o
+
+.PHONY: all clean
+
+all: fw fw_sr fw_tiled
 
 fw: $(OBJS) fw.c
 	$(CC) $(CFLAGS) $(OBJS) fw.c -o fw

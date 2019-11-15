@@ -1,23 +1,23 @@
-.PHONY: all clean
-
-all: fw fw_sr fw_tiled
-
-CC = gcc
-CFLAGS = -fopenmp -O3 -Wall
+CXX = gcc
+CXXFLAGS = -O3 -Wall
 
 HDEPS += %.h
 
 OBJS = util.o
 
-fw: $(OBJS) fw.c
-	$(CC) $(CFLAGS) $(OBJS) fw.c -o fw
-fw_sr: fw_sr.c 
-	$(CC) $(CFLAGS) $(OBJS) fw_sr.c -o fw_sr
-fw_tiled: fw_tiled.c 
-	$(CC) $(CFLAGS) $(OBJS) fw_tiled.c -o fw_tiled
+.PHONY: all clean
 
-%.o: %.c $(HDEPS)
-	$(CC) $(CFLAGS) -c $< -o $@
+all: fw fw_sr fw_tiled
+
+fw: $(OBJS) fw.cpp
+	$(CXX) $(CXXFLAGS) $(OBJS) fw.cpp -o fw
+fw_sr: fw_sr.cpp
+	$(CXX) $(CXXFLAGS) $(OBJS) fw_sr.cpp -o fw_sr
+fw_tiled: fw_tiled.cpp
+	$(CXX) $(CXXFLAGS) $(OBJS) fw_tiled.cpp -o fw_tiled
+
+%.o: %.cpp $(HDEPS)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
 	$(RM) *.o fw fw_sr fw_tiled

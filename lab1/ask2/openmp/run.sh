@@ -14,6 +14,6 @@ do
     echo Number of threads: $OMP_NUM_THREADS
     for N in 1024 2048 4096
     do
-        ./$1 $N $2
+        ./fw_tiled $N 32
     done
 done
