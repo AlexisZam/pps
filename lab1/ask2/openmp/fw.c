@@ -31,7 +31,8 @@ int main(int argc, char **argv) {
 
     gettimeofday(&t1, 0);
     for (k = 0; k < N; k++)
-#pragma omp parallel for collapse(2) default(none) shared(A, k, N)
+#pragma omp parallel for default(none) private(j) shared(A, k, N)
+        // #pragma omp parallel for collapse(2) default(none) shared(A, k, N)
         for (i = 0; i < N; i++)
             for (j = 0; j < N; j++)
                 A[i][j] = min(A[i][j], A[i][k] + A[k][j]);
