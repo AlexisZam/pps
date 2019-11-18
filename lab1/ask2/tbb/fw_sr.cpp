@@ -77,11 +77,13 @@ void FW_SR(int **A, int arow, int acol,
         tbb::task_group g;
         g.run([&] { FW_SR(A, arow, acol + myN / 2, B, brow, bcol, C, crow, ccol + myN / 2, myN / 2, bsize); });
         g.run([&] { FW_SR(A, arow + myN / 2, acol, B, brow + myN / 2, bcol, C, crow, ccol, myN / 2, bsize); });
+        // FW_SR(A, arow + myN / 2, acol, B, brow + myN / 2, bcol, C, crow, ccol, myN / 2, bsize);
         g.wait();
         FW_SR(A, arow + myN / 2, acol + myN / 2, B, brow + myN / 2, bcol, C, crow, ccol + myN / 2, myN / 2, bsize);
         FW_SR(A, arow + myN / 2, acol + myN / 2, B, brow + myN / 2, bcol + myN / 2, C, crow + myN / 2, ccol + myN / 2, myN / 2, bsize);
         g.run([&] { FW_SR(A, arow + myN / 2, acol, B, brow + myN / 2, bcol + myN / 2, C, crow + myN / 2, ccol, myN / 2, bsize); });
         g.run([&] { FW_SR(A, arow, acol + myN / 2, B, brow, bcol + myN / 2, C, crow + myN / 2, ccol + myN / 2, myN / 2, bsize); });
+        // FW_SR(A, arow, acol + myN / 2, B, brow, bcol + myN / 2, C, crow + myN / 2, ccol + myN / 2, myN / 2, bsize);
         g.wait();
         FW_SR(A, arow, acol, B, brow, bcol + myN / 2, C, crow + myN / 2, ccol, myN / 2, bsize);
     }
