@@ -2,7 +2,11 @@
  Standard implementation of the Floyd-Warshall Algorithm
 */
 
+#include "tbb/blocked_range.h"
+#include "tbb/blocked_range2d.h"
 #include "tbb/parallel_for.h"
+// #include "tbb/partitioner.h"
+#include "tbb/task_scheduler_init.h"
 #include "util.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,13 +20,15 @@ int main(int argc, char **argv) {
     struct timeval t1, t2;
     double time;
     int N = 1024;
+    int max_threads;
 
-    if (argc != 2) {
-        fprintf(stdout, "Usage: %s N\n", argv[0]);
+    if (argc != 3) {
+        fprintf(stdout, "Usage: %s N max_threads \n", argv[0]);
         exit(0);
     }
 
     N = atoi(argv[1]);
+    max_threads = atoi(argv[2]);
 
     A = (int **)malloc(N * sizeof(int *));
     for (i = 0; i < N; i++)
@@ -30,15 +36,28 @@ int main(int argc, char **argv) {
 
     graph_init_random(A, -1, N, 128 * N);
 
+    tbb::task_scheduler_init init(max_threads);
+
     gettimeofday(&t1, 0);
+    // tbb::affinity_partitioner ap;
+    // tbb::auto_partitioner ap;
+    // tbb::simple_partitioner sp;
+    // tbb::static_partitioner sp;
     for (k = 0; k < N; k++)
         tbb::parallel_for(
-            tbb::blocked_range<size_t>(0, N),
-            [&](const tbb::blocked_range<size_t> &r) {
-                for (size_t i = r.begin(); i != r.end(); i++)
+            tbb::blocked_range<int>(0, N),
+            [&](const tbb::blocked_range<int> &r) {
+                for (int i = r.begin(); i != r.end(); i++)
                     for (int j = 0; j < N; j++)
                         A[i][j] = min(A[i][j], A[i][k] + A[k][j]);
             });
+    // tbb::parallel_for(
+    //     tbb::blocked_range2d<int>(0, N, 0, N),
+    //     [&](const tbb::blocked_range2d<int, int> &r) {
+    //         for (int i = r.rows().begin(); i != r.rows().end(); i++)
+    //             for (int j = r.cols().begin(); j != r.cols().end(); j++)
+    //                 A[i][j] = min(A[i][j], A[i][k] + A[k][j]);
+    //     });
 
     gettimeofday(&t2, 0);
 

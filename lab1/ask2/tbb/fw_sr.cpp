@@ -25,14 +25,16 @@ int main(int argc, char **argv) {
     double time;
     int B = 16;
     int N = 1024;
+    int nthreads;
 
     if (argc != 3) {
-        fprintf(stdout, "Usage %s N B \n", argv[0]);
+        fprintf(stdout, "Usage %s N B nthreads \n", argv[0]);
         exit(0);
     }
 
     N = atoi(argv[1]);
     B = atoi(argv[2]);
+    nthreads = atoi(argv[3]);
 
     A = (int **)malloc(N * sizeof(int *));
     for (i = 0; i < N; i++)

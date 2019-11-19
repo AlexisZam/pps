@@ -5,7 +5,12 @@
   B = size of tile
   works only when N is a multiple of B
 */
-#include "tbb/task_group.h"
+#include "tbb/blocked_range.h"
+#include "tbb/blocked_range2d.h"
+#include "tbb/parallel_for.h"
+#include "tbb/parallel_invoke.h"
+// #include "tbb/partitioner.h"
+#include "tbb/task_scheduler_init.h"
 #include "util.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,14 +26,16 @@ int main(int argc, char **argv) {
     double time;
     int B = 64;
     int N = 1024;
+    int nthreads;
 
-    if (argc != 3) {
-        fprintf(stdout, "Usage %s N B\n", argv[0]);
+    if (argc != 4) {
+        fprintf(stdout, "Usage %s N B nthreads\n", argv[0]);
         exit(0);
     }
 
     N = atoi(argv[1]);
     B = atoi(argv[2]);
+    nthreads = atoi(argv[3]);
 
     A = (int **)malloc(N * sizeof(int *));
     for (i = 0; i < N; i++)
@@ -36,41 +43,49 @@ int main(int argc, char **argv) {
 
     graph_init_random(A, -1, N, 128 * N);
 
+    tbb::task_scheduler_init init(nthreads);
+
     gettimeofday(&t1, 0);
 
     for (k = 0; k < N; k += B) {
         FW(A, k, k, k, B);
 
-        tbb::task_group g;
-        for (i = 0; i < k; i += B)
-            g.run([=] { FW(A, k, i, k, B); });
+        tbb::parallel_invoke(
+            [&]() {
+                tbb::parallel_for(
+                    tbb::blocked_range<int>(0, N / B),
+                    [&](const tbb::blocked_range<int> &r) {
+                        for (int i = r.begin(); i != r.end(); i++)
+                            if (i != k)
+                                FW(A, k, i * B, k, B);
+                    });
+            },
+            [&]() {
+                tbb::parallel_for(
+                    tbb::blocked_range<int>(0, N / B),
+                    [&](const tbb::blocked_range<int> &r) {
+                        for (int j = r.begin(); j != r.end(); j++)
+                            if (j != k)
+                                FW(A, k, k, j * B, B);
+                    });
+            });
 
-        for (i = k + B; i < N; i += B)
-            g.run([=] { FW(A, k, i, k, B); });
-
-        for (j = 0; j < k; j += B)
-            g.run([=] { FW(A, k, k, j, B); });
-
-        for (j = k + B; j < N; j += B)
-            g.run([=] { FW(A, k, k, j, B); });
-        g.wait();
-
-        for (i = 0; i < k; i += B)
-            for (j = 0; j < k; j += B)
-                g.run([=] { FW(A, k, i, j, B); });
-
-        for (i = 0; i < k; i += B)
-            for (j = k + B; j < N; j += B)
-                g.run([=] { FW(A, k, i, j, B); });
-
-        for (i = k + B; i < N; i += B)
-            for (j = 0; j < k; j += B)
-                g.run([=] { FW(A, k, i, j, B); });
-
-        for (i = k + B; i < N; i += B)
-            for (j = k + B; j < N; j += B)
-                g.run([=] { FW(A, k, i, j, B); });
-        g.wait();
+        tbb::parallel_for(
+            tbb::blocked_range<int>(0, N / B),
+            [&](const tbb::blocked_range<int> &r) {
+                for (int i = r.begin(); i != r.end(); i++)
+                    for (int j = 0; j < N; j += B)
+                        if (i != k && j != k)
+                            FW(A, k, i * B, j, B);
+            });
+        // tbb::parallel_for(
+        //     tbb::blocked_range2d<int, int>(0, N / B, 0, N / B),
+        //     [&](const tbb::blocked_range2d<int, int> &r) {
+        //         for (size_t i = r.rows().begin(); i != r.rows().end(); i++)
+        //             for (size_t j = r.cols().begin(); j != r.cols().end(); j++)
+        //                 if (i != k && j != k)
+        //                     FW(A, k, i * B, j, B);
+        //     });
     }
     gettimeofday(&t2, 0);
 
