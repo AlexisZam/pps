@@ -27,7 +27,7 @@ int main(int argc, char **argv) {
     int N = 1024;
     int nthreads;
 
-    if (argc != 3) {
+    if (argc != 4) {
         fprintf(stdout, "Usage %s N B nthreads \n", argv[0]);
         exit(0);
     }
