@@ -7,6 +7,7 @@
 */
 
 #include "tbb/task_group.h"
+#include "tbb/task_scheduler_init.h"
 #include "util.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -41,6 +42,8 @@ int main(int argc, char **argv) {
         A[i] = (int *)malloc(N * sizeof(int));
 
     graph_init_random(A, -1, N, 128 * N);
+
+    tbb::task_scheduler_init init(nthreads);
 
     gettimeofday(&t1, 0);
     FW_SR(A, 0, 0, A, 0, 0, A, 0, 0, N, B);
