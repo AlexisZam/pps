@@ -6,7 +6,6 @@
   works only when N is a multiple of B
 */
 #include "util.h"
-#include <omp.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/time.h>
@@ -30,15 +29,6 @@ int main(int argc, char **argv) {
     N = atoi(argv[1]);
     B = atoi(argv[2]);
 
-    int num_threads = atoi(getenv("OMP_NUM_THREADS"));
-
-    int a[num_threads][N / B][N / B];
-
-    for (int i = 0; i < num_threads; i++)
-        for (int j = 0; j < N; j += B)
-            for (int k = 0; k < N; k += B)
-                a[i][j / B][k / B] = 0;
-
     A = (int **)malloc(N * sizeof(int *));
     for (i = 0; i < N; i++)
         A[i] = (int *)malloc(N * sizeof(int));
@@ -48,139 +38,29 @@ int main(int argc, char **argv) {
     gettimeofday(&t1, 0);
 
     for (k = 0; k < N; k += B)
-#pragma omp parallel default(none) shared(A, k, B, N, a)
+#pragma omp parallel default(none) shared(A, k, B, N)
     {
-
-// #pragma omp single
-//         {
-//             a[omp_get_thread_num()][k / B][k / B]++;
-//             FW(A, k, k, k, B);
-//         }
-
-// #pragma omp for nowait
-//         for (i = 0; i < k; i += B) {
-//             a[omp_get_thread_num()][i / B][k / B]++;
-//             FW(A, k, i, k, B);
-//         }
-
-// #pragma omp for nowait
-//         for (i = k + B; i < N; i += B) {
-//             a[omp_get_thread_num()][i / B][k / B]++;
-//             FW(A, k, i, k, B);
-//         }
-
-// #pragma omp for nowait
-//         for (j = 0; j < k; j += B) {
-//             a[omp_get_thread_num()][k / B][j / B]++;
-//             FW(A, k, k, j, B);
-//         }
-
-// #pragma omp for
-//         for (j = k + B; j < N; j += B) {
-//             a[omp_get_thread_num()][k / B][j / B]++;
-//             FW(A, k, k, j, B);
-//         }
-
-// #pragma omp for collapse(2) nowait
-//         for (i = 0; i < k; i += B)
-//             for (j = 0; j < k; j += B) {
-//                 a[omp_get_thread_num()][i / B][j / B]++;
-//                 FW(A, k, i, j, B);
-//             }
-
-// #pragma omp for collapse(2) nowait
-//         for (i = 0; i < k; i += B)
-//             for (j = k + B; j < N; j += B) {
-//                 a[omp_get_thread_num()][i / B][j / B]++;
-//                 FW(A, k, i, j, B);
-//             }
-
-// #pragma omp for collapse(2) nowait
-//         for (i = k + B; i < N; i += B)
-//             for (j = 0; j < k; j += B) {
-//                 a[omp_get_thread_num()][i / B][j / B]++;
-//                 FW(A, k, i, j, B);
-//             }
-
-// #pragma omp for collapse(2)
-//         for (i = k + B; i < N; i += B)
-//             for (j = k + B; j < N; j += B) {
-//                 a[omp_get_thread_num()][i / B][j / B]++;
-//                 FW(A, k, i, j, B);
-//             }
 #pragma omp single
-        {
-            a[omp_get_thread_num()][k / B][k / B]++;
-            FW(A, k, k, k, B);
-        }
+        FW(A, k, k, k, B);
 
 #pragma omp for
         for (j = 0; j < N; j += B)
-            if (j != k) {
-                a[omp_get_thread_num()][k / B][j / B]++;
+            if (j != k)
                 FW(A, k, k, j, B);
-            }
 
 #pragma omp for private(j)
         for (i = 0; i < N; i += B)
             if (i != k) {
-                a[omp_get_thread_num()][k / B][i / B]++;
-                FW(A, k, k, i, B);
+                FW(A, k, i, k, B);
                 for (j = 0; j < N; j += B)
-                    if (j != k) {
-                        a[omp_get_thread_num()][i / B][j / B]++;
+                    if (j != k)
                         FW(A, k, i, j, B);
-                    }
             }
-        // #pragma omp single
-        //         {
-        //             a[omp_get_thread_num()][k / B][k / B]++;
-        //             FW(A, k, k, k, B);
-        //         }
-
-        // #pragma omp for nowait
-        //         for (i = 0; i < N; i += B)
-        //             if (i != k) {
-        //                 a[omp_get_thread_num()][i / B][k / B]++;
-        //                 FW(A, k, i, k, B);
-        //             }
-
-        // #pragma omp for
-        //         for (j = 0; j < N; j += B)
-        //             if (j != k) {
-        //                 a[omp_get_thread_num()][k / B][j / B]++;
-        //                 FW(A, k, k, j, B);
-        //             }
-
-        // #pragma omp for private(j)
-        //         for (i = 0; i < N; i += B)
-        //             for (j = 0; j < N; j += B)
-        //                 if (i != k && j != k) {
-        //                     a[omp_get_thread_num()][i / B][j / B]++;
-        //                     FW(A, k, i, j, B);
-        //                 }
     }
-
     gettimeofday(&t2, 0);
 
     time = (double)((t2.tv_sec - t1.tv_sec) * 1000000 + t2.tv_usec - t1.tv_usec) / 1000000;
     printf("FW_TILED,%d,%d,%.4f\n", N, B, time);
-
-    fprintf(stderr, "  ");
-    for (int i = 0; i < N; i += B)
-        fprintf(stderr, "%4d ", i / B);
-    fprintf(stderr, "\n");
-
-    for (int t = 0; t < num_threads; t++) {
-        fprintf(stderr, "%d ", t);
-        for (int i = 0; i < N; i += B) {
-            int sum = 0;
-            for (int j = 0; j < N; j += B)
-                sum += a[t][i / B][j / B];
-            fprintf(stderr, "%4d ", sum);
-        }
-        fprintf(stderr, "\n");
-    }
 
     // for (i = 0; i < N; i++)
     //     for (j = 0; j < N; j++)
