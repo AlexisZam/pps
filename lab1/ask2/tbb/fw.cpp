@@ -2,8 +2,6 @@
  Standard implementation of the Floyd-Warshall Algorithm
 */
 
-#include "tbb/blocked_range.h"
-// #include "tbb/blocked_range2d.h"
 #include "tbb/parallel_for.h"
 #include "tbb/task_scheduler_init.h"
 #include "util.h"
@@ -39,29 +37,19 @@ int main(int argc, char **argv) {
 
     gettimeofday(&t1, 0);
     for (k = 0; k < N; k++)
-        tbb::parallel_for(
-            tbb::blocked_range<int>(0, N),
-            [&](const tbb::blocked_range<int> &r) {
-                for (int i = r.begin(); i != r.end(); i++)
-                    for (int j = 0; j < N; j++)
-                        A[i][j] = min(A[i][j], A[i][k] + A[k][j]);
-            });
-    // tbb::parallel_for(
-    //     tbb::blocked_range2d<int>(0, N, 0, N),
-    //     [&](const tbb::blocked_range2d<int, int> &r) {
-    //         for (int i = r.rows().begin(); i != r.rows().end(); i++)
-    //             for (int j = r.cols().begin(); j != r.cols().end(); j++)
-    //                 A[i][j] = min(A[i][j], A[i][k] + A[k][j]);
-    //     });
+        tbb::parallel_for(0, N, [&](int i) {
+            for (int j = 0; j < N; j++)
+                A[i][j] = min(A[i][j], A[i][k] + A[k][j]);
+        });
 
     gettimeofday(&t2, 0);
 
     time = (double)((t2.tv_sec - t1.tv_sec) * 1000000 + t2.tv_usec - t1.tv_usec) / 1000000;
     printf("FW,%d,%.4f\n", N, time);
 
-    // for (i = 0; i < N; i++)
-    //     for (j = 0; j < N; j++)
-    //         fprintf(stdout, "%d\n", A[i][j]);
+    for (i = 0; i < N; i++)
+        for (j = 0; j < N; j++)
+            fprintf(stdout, "%d\n", A[i][j]);
 
     return 0;
 }

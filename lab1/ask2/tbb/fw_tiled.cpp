@@ -5,8 +5,6 @@
   B = size of tile
   works only when N is a multiple of B
 */
-#include "tbb/blocked_range.h"
-// #include "tbb/blocked_range2d.h"
 #include "tbb/parallel_for.h"
 #include "tbb/parallel_invoke.h"
 #include "tbb/task_scheduler_init.h"
@@ -50,50 +48,33 @@ int main(int argc, char **argv) {
         FW(A, k, k, k, B);
 
         tbb::parallel_invoke(
-            [&]() {
-                tbb::parallel_for(
-                    tbb::blocked_range<int>(0, N / B),
-                    [&](const tbb::blocked_range<int> &r) {
-                        for (int i = r.begin(); i != r.end(); i++)
-                            if (i != k)
-                                FW(A, k, i * B, k, B);
-                    });
+            [&] {
+                tbb::parallel_for(0, N, B, [&](int i) {
+                    if (i != k)
+                        FW(A, k, i, k, B);
+                });
             },
-            [&]() {
-                tbb::parallel_for(
-                    tbb::blocked_range<int>(0, N / B),
-                    [&](const tbb::blocked_range<int> &r) {
-                        for (int j = r.begin(); j != r.end(); j++)
-                            if (j != k)
-                                FW(A, k, k, j * B, B);
-                    });
+            [&] {
+                tbb::parallel_for(0, N, B, [&](int j) {
+                    if (j != k)
+                        FW(A, k, k, j, B);
+                });
             });
 
-        tbb::parallel_for(
-            tbb::blocked_range<int>(0, N / B),
-            [&](const tbb::blocked_range<int> &r) {
-                for (int i = r.begin(); i != r.end(); i++)
-                    for (int j = 0; j < N; j += B)
-                        if (i != k && j != k)
-                            FW(A, k, i * B, j, B);
-            });
-        // tbb::parallel_for(
-        //     tbb::blocked_range2d<int, int>(0, N / B, 0, N / B),
-        //     [&](const tbb::blocked_range2d<int, int> &r) {
-        //         for (size_t i = r.rows().begin(); i != r.rows().end(); i++)
-        //             for (size_t j = r.cols().begin(); j != r.cols().end(); j++)
-        //                 if (i != k && j != k)
-        //                     FW(A, k, i * B, j, B);
-        //     });
+        tbb::parallel_for(0, N, B, [&](int i) {
+            for (int j = 0; j < N; j += B)
+                if (i != k && j != k)
+                    FW(A, k, i, j, B);
+        });
     }
     gettimeofday(&t2, 0);
 
     time = (double)((t2.tv_sec - t1.tv_sec) * 1000000 + t2.tv_usec - t1.tv_usec) / 1000000;
     printf("FW_TILED,%d,%d,%.4f\n", N, B, time);
 
-    // for (i = 0; i < N; i++)
-    //     for (j = 0; j < N; j++)
-    //         fprintf(stdout, "%d\n", A[i][j]);
+    for (i = 0; i < N; i++)
+        for (j = 0; j < N; j++)
+            fprintf(stdout, "%d\n", A[i][j]);
 
     return 0;
 }
