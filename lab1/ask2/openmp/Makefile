@@ -5,14 +5,14 @@ CFLAGS = -fopenmp -O3 -Wall
 
 all: fw fw_sr fw_tiled
 
-fw: fw.c utils.c
+fw: fw.c util.c
 	$(CC) $(CFLAGS) -o fw fw.c util.c
 
-fw_sr: fw_sr.c utils.c
-	$(CC) $(CFLAGS) -o fw_sr fw_sr.c utils.c
+fw_sr: fw_sr.c util.c
+	$(CC) $(CFLAGS) -o fw_sr fw_sr.c util.c
 
-fw_tiled: fw_tiled.c utils.c
-	$(CC) $(CFLAGS) -o fw_tiled fw_tiled.c utils.c
+fw_tiled: fw_tiled.c util.c
+	$(CC) $(CFLAGS) -o fw_tiled fw_tiled.c util.c
 
 clean:
 	$(RM) *.o fw fw_sr fw_tiled
