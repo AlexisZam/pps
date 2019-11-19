@@ -3,9 +3,8 @@
 */
 
 #include "tbb/blocked_range.h"
-#include "tbb/blocked_range2d.h"
+// #include "tbb/blocked_range2d.h"
 #include "tbb/parallel_for.h"
-// #include "tbb/partitioner.h"
 #include "tbb/task_scheduler_init.h"
 #include "util.h"
 #include <stdio.h>
@@ -20,15 +19,15 @@ int main(int argc, char **argv) {
     struct timeval t1, t2;
     double time;
     int N = 1024;
-    int max_threads;
+    int nthreads;
 
     if (argc != 3) {
-        fprintf(stdout, "Usage: %s N max_threads \n", argv[0]);
+        fprintf(stdout, "Usage: %s N nthreads\n", argv[0]);
         exit(0);
     }
 
     N = atoi(argv[1]);
-    max_threads = atoi(argv[2]);
+    nthreads = atoi(argv[2]);
 
     A = (int **)malloc(N * sizeof(int *));
     for (i = 0; i < N; i++)
@@ -36,13 +35,9 @@ int main(int argc, char **argv) {
 
     graph_init_random(A, -1, N, 128 * N);
 
-    tbb::task_scheduler_init init(max_threads);
+    tbb::task_scheduler_init init(nthreads);
 
     gettimeofday(&t1, 0);
-    // tbb::affinity_partitioner ap;
-    // tbb::auto_partitioner ap;
-    // tbb::simple_partitioner sp;
-    // tbb::static_partitioner sp;
     for (k = 0; k < N; k++)
         tbb::parallel_for(
             tbb::blocked_range<int>(0, N),

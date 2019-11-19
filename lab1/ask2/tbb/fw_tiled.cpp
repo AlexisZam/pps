@@ -6,10 +6,9 @@
   works only when N is a multiple of B
 */
 #include "tbb/blocked_range.h"
-#include "tbb/blocked_range2d.h"
+// #include "tbb/blocked_range2d.h"
 #include "tbb/parallel_for.h"
 #include "tbb/parallel_invoke.h"
-// #include "tbb/partitioner.h"
 #include "tbb/task_scheduler_init.h"
 #include "util.h"
 #include <stdio.h>
