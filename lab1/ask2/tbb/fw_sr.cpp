@@ -29,7 +29,7 @@ int main(int argc, char **argv) {
     int nthreads;
 
     if (argc != 4) {
-        fprintf(stdout, "Usage %s N B nthreads\n", argv[0]);
+        fprintf(stdout, "Usage %s N B nthreads \n", argv[0]);
         exit(0);
     }
 

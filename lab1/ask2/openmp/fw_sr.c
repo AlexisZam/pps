@@ -26,7 +26,7 @@ int main(int argc, char **argv) {
     int N = 1024;
 
     if (argc != 3) {
-        fprintf(stdout, "Usage %s N B\n", argv[0]);
+        fprintf(stdout, "Usage %s N B \n", argv[0]);
         exit(0);
     }
 
