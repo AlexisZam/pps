@@ -16,4 +16,4 @@ fw_tiled: fw_tiled.cpp util.cpp
 	$(CXX) $(CXXFLAGS) -o fw_tiled fw_tiled.cpp util.cpp $(LIBS)
 
 clean:
-	$(RM) *.o fw fw_sr fw_tiled
+	$(RM) fw fw_sr fw_tiled

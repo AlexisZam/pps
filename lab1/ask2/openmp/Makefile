@@ -15,4 +15,4 @@ fw_tiled: fw_tiled.c util.c
 	$(CC) $(CFLAGS) -o fw_tiled fw_tiled.c util.c
 
 clean:
-	$(RM) *.o fw fw_sr fw_tiled
+	$(RM) fw fw_sr fw_tiled
