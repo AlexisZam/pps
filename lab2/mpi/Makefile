@@ -6,16 +6,16 @@ CONV = -DTEST_CONV
 
 .PHONY: all clean
 
-all: jacobi seidelsor redblacksor
+all: jacobi gaussseidelsor redblacksor
 
-jacobi: Jacobi_serial.c utils.c
-	$(CC) $(CFLAGS) $(RES) $(CONV) -o jacobi Jacobi_serial.c utils.c $(LIBS)
+jacobi: Jacobi.c utils.c
+	$(CC) $(CFLAGS) $(RES) $(CONV) -o jacobi Jacobi.c utils.c $(LIBS)
 
-seidelsor: GaussSeidelSOR_serial.c utils.c
-	$(CC) $(CFLAGS) $(RES) $(CONV) -o seidelsor GaussSeidelSOR_serial.c utils.c $(LIBS)
+gaussseidelsor: GaussSeidelSOR.c utils.c
+	$(CC) $(CFLAGS) $(RES) $(CONV) -o gaussseidelsor GaussSeidelSOR.c utils.c $(LIBS)
 
-redblacksor: RedBlackSOR_serial.c utils.c
-	$(CC) $(CFLAGS) $(RES) $(CONV) -o redblacksor RedBlackSOR_serial.c utils.c $(LIBS)
+redblacksor: RedBlackSOR.c utils.c
+	$(CC) $(CFLAGS) $(RES) $(CONV) -o redblacksor RedBlackSOR.c utils.c $(LIBS)
 
 clean:
-	$(RM) jacobi seidelsor redblacksor
+	$(RM) jacobi gaussseidelsor redblacksor
