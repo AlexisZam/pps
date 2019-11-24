@@ -1,7 +1,6 @@
 #define C 100
 #define T 100000000
 
-#define val 1.0
 #define e 0.000001
 
 double max(double a, double b);
