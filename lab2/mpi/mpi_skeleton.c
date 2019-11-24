@@ -111,7 +111,7 @@ int main(int argc, char **argv) {
 
     //----Rank 0 scatters the global matrix----//
 
-    //*************TODO*******************//
+    // TODO
 
     /*Fill your code here*/
 
@@ -125,7 +125,7 @@ int main(int argc, char **argv) {
 
     //----Define datatypes or allocate buffers for message passing----//
 
-    //*************TODO*******************//
+    // TODO
 
     /*Fill your code here*/
 
@@ -133,7 +133,7 @@ int main(int argc, char **argv) {
 
     //----Find the 4 neighbors with which a process exchanges messages----//
 
-    //*************TODO*******************//
+    // TODO
     int north, south, east, west;
 
     /*Fill your code here*/
@@ -144,7 +144,7 @@ int main(int argc, char **argv) {
     //************************************//
 
     //---Define the iteration ranges per process-----//
-    //*************TODO*******************//
+    // TODO
 
     int i_min, i_max, j_min, j_max;
 
@@ -169,7 +169,7 @@ int main(int argc, char **argv) {
         for (t = 0; t < T; t++) {
 #endif
 
-            //*************TODO*******************//
+            // TODO
 
             /*Fill your code here*/
 
@@ -179,7 +179,7 @@ int main(int argc, char **argv) {
 
 #ifdef TEST_CONV
             if (t % C == 0) {
-                //*************TODO**************//
+                // TODO
                 /*Test convergence*/
             }
 #endif
@@ -199,7 +199,7 @@ int main(int argc, char **argv) {
             U = allocate2d(global_padded[0], global_padded[1]);
         }
 
-        //*************TODO*******************//
+        // TODO
 
         /*Fill your code here*/
 
