@@ -3,7 +3,40 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/time.h>
+
+#if defined(JACOBI)
+void Jacobi(double **u_previous, double **u_current, int X_min, int X_max, int Y_min, int Y_max) {
+    int i, j;
+    for (i = X_min; i < X_max; i++)
+        for (j = Y_min; j < Y_max; j++)
+            u_current[i][j] = (u_previous[i - 1][j] + u_previous[i + 1][j] + u_previous[i][j - 1] + u_previous[i][j + 1]) / 4.0;
+}
+#elif defined(GAUSS_SEIDEL_SOR)
+void GaussSeidel(double **u_previous, double **u_current, int X_min, int X_max, int Y_min, int Y_max, double omega) {
+    int i, j;
+    for (i = X_min; i < X_max; i++)
+        for (j = Y_min; j < Y_max; j++)
+            u_current[i][j] = u_previous[i][j] + (u_current[i - 1][j] + u_previous[i + 1][j] + u_current[i][j - 1] + u_previous[i][j + 1] - 4 * u_previous[i][j]) * omega / 4.0;
+}
+#elif defined(RED_BLACK_SOR)
+void RedSOR(double **u_previous, double **u_current, int X_min, int X_max, int Y_min, int Y_max, double omega) {
+    int i, j;
+    for (i = X_min; i < X_max; i++)
+        for (j = Y_min; j < Y_max; j++)
+            if ((i + j) % 2 == 0)
+                u_current[i][j] = u_previous[i][j] + (omega / 4.0) * (u_previous[i - 1][j] + u_previous[i + 1][j] + u_previous[i][j - 1] + u_previous[i][j + 1] - 4 * u_previous[i][j]);
+}
+
+void BlackSOR(double **u_previous, double **u_current, int X_min, int X_max, int Y_min, int Y_max, double omega) {
+    int i, j;
+    for (i = X_min; i < X_max; i++)
+        for (j = Y_min; j < Y_max; j++)
+            if ((i + j) % 2 == 1)
+                u_current[i][j] = u_previous[i][j] + (omega / 4.0) * (u_current[i - 1][j] + u_current[i + 1][j] + u_current[i][j - 1] + u_current[i][j + 1] - 4 * u_previous[i][j]);
+}
+#endif
 
 int main(int argc, char **argv) {
     int rank, size;
@@ -13,12 +46,14 @@ int main(int argc, char **argv) {
     int i, j, t;
     int global_converged = 0, converged = 0; //flags for convergence, global and per process
     MPI_Datatype dummy;                      //dummy datatype used to align user-defined datatypes in memory
-    double omega;                            //relaxation factor - useless for Jacobi
+#if defined(GAUSS_SEIDEL_SOR) || defined(RED_BLACK_SOR)
+    double omega; //relaxation factor - useless for Jacobi
+#endif
 
     struct timeval tts, ttf, tcs, tcf; //Timers: total-> tts,ttf, computation -> tcs,tcf
     double ttotal = 0, tcomp = 0, total_time, comp_time;
 
-    double **U, **u_current, **u_previous, **swap; //Global matrix, local current and previous matrices, pointer to swap between current and previous
+    double **U = NULL, **u_current, **u_previous, **swap; //Global matrix, local current and previous matrices, pointer to swap between current and previous
 
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -60,8 +95,10 @@ int main(int argc, char **argv) {
         }
     }
 
+#if defined(GAUSS_SEIDEL_SOR) || defined(RED_BLACK_SOR)
     //Initialization of omega
     omega = 2.0 / (1 + sin(3.14 / global[0]));
+#endif
 
     //----Allocate global 2D-domain and initialize boundary values----//
     //----Rank 0 holds the global 2D-domain----//
@@ -96,7 +133,7 @@ int main(int argc, char **argv) {
     MPI_Type_commit(&local_block);
 
     //----Rank 0 defines positions and counts of local blocks (2D-subdomains) on global matrix----//
-    int *scatteroffset, *scattercounts;
+    int *scatteroffset = NULL, *scattercounts = NULL;
     if (rank == 0) {
         scatteroffset = (int *)malloc(size * sizeof(int));
         scattercounts = (int *)malloc(size * sizeof(int));
@@ -109,11 +146,8 @@ int main(int argc, char **argv) {
 
     //----Rank 0 scatters the global matrix----//
 
-    //----Rank 0 scatters the global matrix----//
-
-    // TODO
-
-    /*Fill your code here*/
+    MPI_Scatterv(rank == 0 ? U[0] : NULL, scattercounts, scatteroffset, global_block, &u_previous[1][1], 1, local_block, 0, CART_COMM);
+    memcpy(u_current[0], u_previous[0], (local[0] + 2) * (local[1] + 2) * sizeof(double));
 
     /*Make sure u_current and u_previous are
 		both initialized*/
@@ -125,18 +159,19 @@ int main(int argc, char **argv) {
 
     //----Define datatypes or allocate buffers for message passing----//
 
-    // TODO
-
-    /*Fill your code here*/
+    MPI_Datatype local_col;
+    MPI_Type_vector(local[0], 1, local[1] + 2, MPI_DOUBLE, &dummy);
+    MPI_Type_create_resized(dummy, 0, sizeof(double), &local_col);
+    MPI_Type_commit(&local_col);
 
     //************************************//
 
     //----Find the 4 neighbors with which a process exchanges messages----//
 
-    // TODO
     int north, south, east, west;
 
-    /*Fill your code here*/
+    MPI_Cart_shift(CART_COMM, 0, 1, &north, &south);
+    MPI_Cart_shift(CART_COMM, 1, 1, &west, &east);
 
     /*Make sure you handle non-existing
 		neighbors appropriately*/
@@ -144,11 +179,13 @@ int main(int argc, char **argv) {
     //************************************//
 
     //---Define the iteration ranges per process-----//
-    // TODO
 
     int i_min, i_max, j_min, j_max;
 
-    /*Fill your code here*/
+    i_min = rank_grid[0] == 0 ? 2 : 1;
+    i_max = rank_grid[0] == grid[0] - 1 ? local[0] - (global_padded[0] - global[0]) : local[0] + 1;
+    j_min = rank_grid[1] == 0 ? 2 : 1;
+    j_max = rank_grid[1] == grid[1] - 1 ? local[1] - (global_padded[1] - global[1]) : local[1] + 1;
 
     /*Three types of ranges:
 		-internal processes
@@ -162,62 +199,168 @@ int main(int argc, char **argv) {
     gettimeofday(&tts, NULL);
 #ifdef TEST_CONV
     for (t = 0; t < T && !global_converged; t++) {
-#endif
-#ifndef TEST_CONV
+#else
 #undef T
 #define T 256
-        for (t = 0; t < T; t++) {
+    for (t = 0; t < T; t++) {
 #endif
 
-            // TODO
+#if defined(JACOBI)
+        swap = u_previous;
+        u_previous = u_current;
+        u_current = swap;
 
-            /*Fill your code here*/
+        gettimeofday(&tcs, NULL);
 
-            /*Compute and Communicate*/
+        Jacobi(u_previous, u_current, i_min, i_max, j_min, j_max);
 
-            /*Add appropriate timers for computation*/
+        gettimeofday(&tcf, NULL);
+        tcomp += (tcf.tv_sec - tcs.tv_sec) + (tcf.tv_usec - tcs.tv_usec) * 0.000001;
+
+        MPI_Request array_of_requests[8];
+        MPI_Status array_of_statuses[8];
+        int i = 0;
+        if (north != MPI_PROC_NULL) {
+            MPI_Isend(u_current[1] + 1, local[1], MPI_DOUBLE, north, 0, CART_COMM, &array_of_requests[i++]);
+            MPI_Irecv(u_current[0] + 1, local[1], MPI_DOUBLE, north, 0, CART_COMM, &array_of_requests[i++]);
+        }
+        if (south != MPI_PROC_NULL) {
+            MPI_Isend(u_current[local[0]] + 1, local[1], MPI_DOUBLE, south, 0, CART_COMM, &array_of_requests[i++]);
+            MPI_Irecv(u_current[local[0] + 1] + 1, local[1], MPI_DOUBLE, south, 0, CART_COMM, &array_of_requests[i++]);
+        }
+        if (east != MPI_PROC_NULL) {
+            MPI_Isend(&u_current[1][local[1]], 1, local_col, east, 0, CART_COMM, &array_of_requests[i++]);
+            MPI_Irecv(&u_current[1][local[1] + 1], 1, local_col, east, 0, CART_COMM, &array_of_requests[i++]);
+        }
+        if (west != MPI_PROC_NULL) {
+            MPI_Isend(&u_current[1][1], 1, local_col, west, 0, CART_COMM, &array_of_requests[i++]);
+            MPI_Irecv(u_current[1], 1, local_col, west, 0, CART_COMM, &array_of_requests[i++]);
+        }
+        MPI_Waitall(i, array_of_requests, array_of_statuses);
+#elif defined(GAUSS_SEIDEL_SOR)
+        swap = u_previous;
+        u_previous = u_current;
+        u_current = swap;
+
+        MPI_Request array_of_requests[6];
+        MPI_Status array_of_statuses[6];
+        int i = 0;
+        if (north != MPI_PROC_NULL)
+            MPI_Irecv(u_current[0] + 1, local[1], MPI_DOUBLE, north, 0, CART_COMM, &array_of_requests[i++]);
+        if (west != MPI_PROC_NULL)
+            MPI_Irecv(u_current[1], 1, local_col, west, 0, CART_COMM, &array_of_requests[i++]);
+        MPI_Waitall(i, array_of_requests, array_of_statuses);
+
+        gettimeofday(&tcs, NULL);
+
+        GaussSeidel(u_previous, u_current, i_min, i_max, j_min, j_max, omega);
+
+        gettimeofday(&tcf, NULL);
+        tcomp += (tcf.tv_sec - tcs.tv_sec) + (tcf.tv_usec - tcs.tv_usec) * 0.000001;
+
+        i = 0;
+        if (north != MPI_PROC_NULL)
+            MPI_Isend(u_current[1] + 1, local[1], MPI_DOUBLE, north, 0, CART_COMM, &array_of_requests[i++]);
+        if (south != MPI_PROC_NULL) {
+            MPI_Isend(u_current[local[0]] + 1, local[1], MPI_DOUBLE, south, 0, CART_COMM, &array_of_requests[i++]);
+            MPI_Irecv(u_current[local[0] + 1] + 1, local[1], MPI_DOUBLE, south, 0, CART_COMM, &array_of_requests[i++]);
+        }
+        if (east != MPI_PROC_NULL) {
+            MPI_Isend(&u_current[1][local[1]], 1, local_col, east, 0, CART_COMM, &array_of_requests[i++]);
+            MPI_Irecv(&u_current[1][local[1] + 1], 1, local_col, east, 0, CART_COMM, &array_of_requests[i++]);
+        }
+        if (west != MPI_PROC_NULL)
+            MPI_Isend(&u_current[1][1], 1, local_col, west, 0, CART_COMM, &array_of_requests[i++]);
+        MPI_Waitall(i, array_of_requests, array_of_statuses);
+#elif defined(RED_BLACK_SOR)
+    if (t % 2 == 0) {
+        swap = u_previous;
+        u_previous = u_current;
+        u_current = swap;
+    }
+
+    gettimeofday(&tcs, NULL);
+
+    if (t % 2 == 0)
+        RedSOR(u_previous, u_current, i_min, i_max, j_min, j_max, omega);
+    else
+        BlackSOR(u_previous, u_current, i_min, i_max, j_min, j_max, omega);
+
+    gettimeofday(&tcf, NULL);
+    tcomp += (tcf.tv_sec - tcs.tv_sec) + (tcf.tv_usec - tcs.tv_usec) * 0.000001;
+
+    MPI_Request array_of_requests[8];
+    MPI_Status array_of_statuses[8];
+    int i = 0;
+    if (north != MPI_PROC_NULL) {
+        MPI_Isend(u_current[1] + 1, local[1], MPI_DOUBLE, north, 0, CART_COMM, &array_of_requests[i++]);
+        MPI_Irecv(u_current[0] + 1, local[1], MPI_DOUBLE, north, 0, CART_COMM, &array_of_requests[i++]);
+    }
+    if (south != MPI_PROC_NULL) {
+        MPI_Isend(u_current[local[0]] + 1, local[1], MPI_DOUBLE, south, 0, CART_COMM, &array_of_requests[i++]);
+        MPI_Irecv(u_current[local[0] + 1] + 1, local[1], MPI_DOUBLE, south, 0, CART_COMM, &array_of_requests[i++]);
+    }
+    if (east != MPI_PROC_NULL) {
+        MPI_Isend(&u_current[1][local[1]], 1, local_col, east, 0, CART_COMM, &array_of_requests[i++]);
+        MPI_Irecv(&u_current[1][local[1] + 1], 1, local_col, east, 0, CART_COMM, &array_of_requests[i++]);
+    }
+    if (west != MPI_PROC_NULL) {
+        MPI_Isend(&u_current[1][1], 1, local_col, west, 0, CART_COMM, &array_of_requests[i++]);
+        MPI_Irecv(u_current[1], 1, local_col, west, 0, CART_COMM, &array_of_requests[i++]);
+    }
+    MPI_Waitall(i, array_of_requests, array_of_statuses);
+#endif
+
+        /*Compute and Communicate*/
+
+        /*Add appropriate timers for computation*/
 
 #ifdef TEST_CONV
-            if (t % C == 0) {
-                // TODO
-                /*Test convergence*/
-            }
+        if (t % C == 0) {
+            converged = converge(u_previous, u_current, local[0] + 2, local[1] + 2);
+            MPI_Allreduce(&converged, &global_converged, 1, MPI_INT, MPI_MIN, MPI_COMM_WORLD);
+            /*Test convergence*/
+        }
 #endif
-
-            //************************************//
-        }
-        gettimeofday(&ttf, NULL);
-
-        ttotal = (ttf.tv_sec - tts.tv_sec) + (ttf.tv_usec - tts.tv_usec) * 0.000001;
-
-        MPI_Reduce(&ttotal, &total_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-        MPI_Reduce(&tcomp, &comp_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-
-        //----Rank 0 gathers local matrices back to the global matrix----//
-
-        if (rank == 0) {
-            U = allocate2d(global_padded[0], global_padded[1]);
-        }
-
-        // TODO
-
-        /*Fill your code here*/
 
         //************************************//
+    }
+    gettimeofday(&ttf, NULL);
 
-        //----Printing results----//
+    ttotal = (ttf.tv_sec - tts.tv_sec) + (ttf.tv_usec - tts.tv_usec) * 0.000001;
 
-        //**************TODO: Change "Jacobi" to "GaussSeidelSOR" or "RedBlackSOR" for appropriate printing****************//
-        if (rank == 0) {
-            printf("Jacobi X %d Y %d Px %d Py %d Iter %d ComputationTime %lf TotalTime %lf midpoint %lf\n", global[0], global[1], grid[0], grid[1], t, comp_time, total_time, U[global[0] / 2][global[1] / 2]);
+    MPI_Reduce(&ttotal, &total_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&tcomp, &comp_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+
+    //----Rank 0 gathers local matrices back to the global matrix----//
+
+    if (rank == 0) {
+        U = allocate2d(global_padded[0], global_padded[1]);
+    }
+
+    MPI_Gatherv(&u_current[1][1], 1, local_block, rank == 0 ? U[0] : NULL, scattercounts, scatteroffset, global_block, 0, CART_COMM);
+
+    //************************************//
+
+    //----Printing results----//
+
+    if (rank == 0) {
+#if defined(JACOBI)
+        char name[] = "Jacobi";
+#elif defined(GAUSS_SEIDEL_SOR)
+        char name[] = "GaussSeidelSOR";
+#elif defined(RED_BLACK_SOR)
+    char name[] = "RedBlackSOR";
+#endif
+        printf("%s X %d Y %d Px %d Py %d Iter %d ComputationTime %lf TotalTime %lf midpoint %lf\n", name, global[0], global[1], grid[0], grid[1], t, comp_time, total_time, U[global[0] / 2][global[1] / 2]);
 
 #ifdef PRINT_RESULTS
-            char *s = malloc(50 * sizeof(char));
-            sprintf(s, "resJacobiMPI_%dx%d_%dx%d", global[0], global[1], grid[0], grid[1]);
-            fprint2d(s, U, global[0], global[1]);
-            free(s);
+        char *s = malloc(50 * sizeof(char));
+        sprintf(s, "../outputs/res%sMPI_%dx%d_%dx%d", name, global[0], global[1], grid[0], grid[1]);
+        fprint2d(s, U, global[0], global[1]);
+        free(s);
 #endif
-        }
-        MPI_Finalize();
-        return 0;
     }
+    MPI_Finalize();
+    return 0;
+}

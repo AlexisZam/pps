@@ -8,4 +8,4 @@
 
 module load openmpi/1.8.3
 cd /home/parallel/parlab02/pps/lab2/mpi
-mpirun -np 16 ./jacobi
+mpirun -np 16 ./jacobi 16 16 4 4

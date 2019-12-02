@@ -1,8 +1,8 @@
 CC = gcc
 CFLAGS = -O3 -Wall -Wextra
-LIBS = -lm
 RES = -D PRINT_RESULTS
 CONV = -D TEST_CONV
+LIBS = -lm
 
 .PHONY: all clean
 
