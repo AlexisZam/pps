@@ -3,6 +3,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/time.h>
 
 void GaussSeidel(double **u_previous, double **u_current, int X_min, int X_max, int Y_min, int Y_max, double omega) {
@@ -116,9 +117,8 @@ int main(int argc, char **argv) {
 
     //----Rank 0 scatters the global matrix----//
 
-    // TODO
-
-    /*Fill your code here*/
+    MPI_Scatterv(rank == 0 ? U[0] : NULL, scattercounts, scatteroffset, global_block, &u_previous[1][1], 1, local_block, 0, CART_COMM);
+    memcpy(u_current[0], u_previous[0], (local[0] + 2) * (local[1] + 2) * sizeof(double));
 
     /*Make sure u_current and u_previous are
 		both initialized*/
@@ -130,18 +130,19 @@ int main(int argc, char **argv) {
 
     //----Define datatypes or allocate buffers for message passing----//
 
-    // TODO
-
-    /*Fill your code here*/
+    MPI_Datatype local_col;
+    MPI_Type_vector(local[0], 1, local[1] + 2, MPI_DOUBLE, &dummy);
+    MPI_Type_create_resized(dummy, 0, sizeof(double), &local_col);
+    MPI_Type_commit(&local_col);
 
     //************************************//
 
     //----Find the 4 neighbors with which a process exchanges messages----//
 
-    // TODO
     int north, south, east, west;
 
-    /*Fill your code here*/
+    MPI_Cart_shift(CART_COMM, 0, 1, &north, &south);
+    MPI_Cart_shift(CART_COMM, 1, 1, &west, &east);
 
     /*Make sure you handle non-existing
 		neighbors appropriately*/
@@ -149,11 +150,13 @@ int main(int argc, char **argv) {
     //************************************//
 
     //---Define the iteration ranges per process-----//
-    // TODO
 
     int i_min, i_max, j_min, j_max;
 
-    /*Fill your code here*/
+    i_min = rank_grid[0] == 0 ? 2 : 1;
+    i_max = rank_grid[0] == grid[0] - 1 ? local[0] - (global_padded[0] - global[0]) : local[0] + 1;
+    j_min = rank_grid[1] == 0 ? 2 : 1;
+    j_max = rank_grid[1] == grid[1] - 1 ? local[1] - (global_padded[1] - global[1]) : local[1] + 1;
 
     /*Three types of ranges:
 		-internal processes
@@ -167,61 +170,90 @@ int main(int argc, char **argv) {
     gettimeofday(&tts, NULL);
 #ifdef TEST_CONV
     for (t = 0; t < T && !global_converged; t++) {
-#endif
-#ifndef TEST_CONV
+#else
 #undef T
 #define T 256
-        for (t = 0; t < T; t++) {
+    for (t = 0; t < T; t++) {
 #endif
 
-            // TODO
+        swap = u_previous;
+        u_previous = u_current;
+        u_current = swap;
 
-            /*Fill your code here*/
+        MPI_Request array_of_requests[6];
+        MPI_Status array_of_statuses[6];
+        int i = 0;
+        if (north != MPI_PROC_NULL)
+            MPI_Irecv(u_current[0] + 1, local[1], MPI_DOUBLE, north, 0, CART_COMM, &array_of_requests[i++]);
+        if (west != MPI_PROC_NULL)
+            MPI_Irecv(u_current[1], 1, local_col, west, 0, CART_COMM, &array_of_requests[i++]);
+        MPI_Waitall(i, array_of_requests, array_of_statuses);
 
-            /*Compute and Communicate*/
+        gettimeofday(&tcs, NULL);
 
-            /*Add appropriate timers for computation*/
+        GaussSeidel(u_previous, u_current, i_min, i_max, j_min, j_max, omega);
+
+        gettimeofday(&tcf, NULL);
+        tcomp += (tcf.tv_sec - tcs.tv_sec) + (tcf.tv_usec - tcs.tv_usec) * 0.000001;
+
+        i = 0;
+        if (north != MPI_PROC_NULL)
+            MPI_Isend(u_current[1] + 1, local[1], MPI_DOUBLE, north, 0, CART_COMM, &array_of_requests[i++]);
+        if (south != MPI_PROC_NULL) {
+            MPI_Isend(u_current[local[0]] + 1, local[1], MPI_DOUBLE, south, 0, CART_COMM, &array_of_requests[i++]);
+            MPI_Irecv(u_current[local[0] + 1] + 1, local[1], MPI_DOUBLE, south, 0, CART_COMM, &array_of_requests[i++]);
+        }
+        if (east != MPI_PROC_NULL) {
+            MPI_Isend(&u_current[1][local[1]], 1, local_col, east, 0, CART_COMM, &array_of_requests[i++]);
+            MPI_Irecv(&u_current[1][local[1] + 1], 1, local_col, east, 0, CART_COMM, &array_of_requests[i++]);
+        }
+        if (west != MPI_PROC_NULL)
+            MPI_Isend(&u_current[1][1], 1, local_col, west, 0, CART_COMM, &array_of_requests[i++]);
+        MPI_Waitall(i, array_of_requests, array_of_statuses);
+
+        /*Compute and Communicate*/
+
+        /*Add appropriate timers for computation*/
 
 #ifdef TEST_CONV
-            if (t % C == 0) {
-                // TODO
-                /*Test convergence*/
-            }
+        if (t % C == 0) {
+            converged = converge(u_previous, u_current, local[0] + 2, local[1] + 2);
+            MPI_Allreduce(&converged, &global_converged, 1, MPI_INT, MPI_MIN, MPI_COMM_WORLD);
+            /*Test convergence*/
+        }
 #endif
-
-            //************************************//
-        }
-        gettimeofday(&ttf, NULL);
-
-        ttotal = (ttf.tv_sec - tts.tv_sec) + (ttf.tv_usec - tts.tv_usec) * 0.000001;
-
-        MPI_Reduce(&ttotal, &total_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-        MPI_Reduce(&tcomp, &comp_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-
-        //----Rank 0 gathers local matrices back to the global matrix----//
-
-        if (rank == 0) {
-            U = allocate2d(global_padded[0], global_padded[1]);
-        }
-
-        // TODO
-
-        /*Fill your code here*/
 
         //************************************//
+    }
+    gettimeofday(&ttf, NULL);
 
-        //----Printing results----//
+    ttotal = (ttf.tv_sec - tts.tv_sec) + (ttf.tv_usec - tts.tv_usec) * 0.000001;
 
-        if (rank == 0) {
-            printf("GaussSeidelSOR X %d Y %d Px %d Py %d Iter %d ComputationTime %lf TotalTime %lf midpoint %lf\n", global[0], global[1], grid[0], grid[1], t, comp_time, total_time, U[global[0] / 2][global[1] / 2]);
+    MPI_Reduce(&ttotal, &total_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&tcomp, &comp_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+
+    //----Rank 0 gathers local matrices back to the global matrix----//
+
+    if (rank == 0) {
+        U = allocate2d(global_padded[0], global_padded[1]);
+    }
+
+    MPI_Gatherv(&u_current[1][1], 1, local_block, rank == 0 ? U[0] : NULL, scattercounts, scatteroffset, global_block, 0, CART_COMM);
+
+    //************************************//
+
+    //----Printing results----//
+
+    if (rank == 0) {
+        printf("GaussSeidelSOR X %d Y %d Px %d Py %d Iter %d ComputationTime %lf TotalTime %lf midpoint %lf\n", global[0], global[1], grid[0], grid[1], t, comp_time, total_time, U[global[0] / 2][global[1] / 2]);
 
 #ifdef PRINT_RESULTS
-            char *s = malloc(50 * sizeof(char));
-            sprintf(s, "resJacobiMPI_%dx%d_%dx%d", global[0], global[1], grid[0], grid[1]);
-            fprint2d(s, U, global[0], global[1]);
-            free(s);
+        char *s = malloc(50 * sizeof(char));
+        sprintf(s, "resGaussSeidelSORMPI_%dx%d_%dx%d", global[0], global[1], grid[0], grid[1]);
+        fprint2d(s, U, global[0], global[1]);
+        free(s);
 #endif
-        }
-        MPI_Finalize();
-        return 0;
     }
+    MPI_Finalize();
+    return 0;
+}

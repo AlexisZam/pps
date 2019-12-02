@@ -79,7 +79,7 @@ int main(int argc, char **argv) {
 
 #ifdef PRINT_RESULTS
         char *s = malloc(30 * sizeof(char));
-        sprintf(s, "resRedBlackSORNaive_%dx%d", X, Y);
+        sprintf(s, "../outputs/resRedBlackSORNaive_%dx%d", X, Y);
         fprint2d(s, u_current, X, Y);
         free(s);
 #endif

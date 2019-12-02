@@ -72,7 +72,7 @@ int main(int argc, char **argv) {
 
 #ifdef PRINT_RESULTS
         char *s = malloc(30 * sizeof(char));
-        sprintf(s, "resGaussSeidelSORNaive_%dx%d", X, Y);
+        sprintf(s, "../outputs/resGaussSeidelSORNaive_%dx%d", X, Y);
         fprint2d(s, u_current, X, Y);
         free(s);
 #endif
