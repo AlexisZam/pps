@@ -67,8 +67,8 @@ int main(int argc, char **argv) {
         printf("Jacobi X %d Y %d Iter %d Time %lf midpoint %lf\n", X, Y, t - 1, time, u_current[X / 2][Y / 2]);
 
 #ifdef PRINT_RESULTS
-        char *s = malloc(60 * sizeof(char));
-        sprintf(s, "../outputs/resJacobiNaive_%dx%d", X, Y);
+        char *s = malloc(30 * sizeof(char));
+        sprintf(s, "resJacobiNaive_%dx%d", X, Y);
         fprint2d(s, u_current, X, Y);
         free(s);
 #endif

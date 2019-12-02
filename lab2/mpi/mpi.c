@@ -356,7 +356,7 @@ int main(int argc, char **argv) {
 
 #ifdef PRINT_RESULTS
         char *s = malloc(50 * sizeof(char));
-        sprintf(s, "../outputs/res%sMPI_%dx%d_%dx%d", name, global[0], global[1], grid[0], grid[1]);
+        sprintf(s, "res%sMPI_%dx%d_%dx%d", name, global[0], global[1], grid[0], grid[1]);
         fprint2d(s, U, global[0], global[1]);
         free(s);
 #endif

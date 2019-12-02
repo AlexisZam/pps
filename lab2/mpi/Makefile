@@ -8,14 +8,14 @@ LIBS = -lm
 
 all: jacobi gaussseidelsor redblacksor
 
-jacobi: mpi_skeleton.c utils.c
-	$(CC) $(CFLAGS) $(RES) $(CONV) -D JACOBI -o jacobi mpi_skeleton.c utils.c $(LIBS)
+jacobi: mpi.c utils.c
+	$(CC) $(CFLAGS) $(RES) $(CONV) -D JACOBI -o jacobi mpi.c utils.c $(LIBS)
 
-gaussseidelsor: mpi_skeleton.c utils.c
-	$(CC) $(CFLAGS) $(RES) $(CONV) -D GAUSS_SEIDEL_SOR -o gaussseidelsor mpi_skeleton.c utils.c $(LIBS)
+gaussseidelsor: mpi.c utils.c
+	$(CC) $(CFLAGS) $(RES) $(CONV) -D GAUSS_SEIDEL_SOR -o gaussseidelsor mpi.c utils.c $(LIBS)
 
-redblacksor: mpi_skeleton.c utils.c
-	$(CC) $(CFLAGS) $(RES) $(CONV) -D RED_BLACK_SOR -o redblacksor mpi_skeleton.c utils.c $(LIBS)
+redblacksor: mpi.c utils.c
+	$(CC) $(CFLAGS) $(RES) $(CONV) -D RED_BLACK_SOR -o redblacksor mpi.c utils.c $(LIBS)
 
 clean:
 	$(RM) jacobi gaussseidelsor redblacksor
