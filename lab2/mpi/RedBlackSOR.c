@@ -5,6 +5,22 @@
 #include <stdlib.h>
 #include <sys/time.h>
 
+void RedSOR(double **u_previous, double **u_current, int X_min, int X_max, int Y_min, int Y_max, double omega) {
+    int i, j;
+    for (i = X_min; i < X_max; i++)
+        for (j = Y_min; j < Y_max; j++)
+            if ((i + j) % 2 == 0)
+                u_current[i][j] = u_previous[i][j] + (omega / 4.0) * (u_previous[i - 1][j] + u_previous[i + 1][j] + u_previous[i][j - 1] + u_previous[i][j + 1] - 4 * u_previous[i][j]);
+}
+
+void BlackSOR(double **u_previous, double **u_current, int X_min, int X_max, int Y_min, int Y_max, double omega) {
+    int i, j;
+    for (i = X_min; i < X_max; i++)
+        for (j = Y_min; j < Y_max; j++)
+            if ((i + j) % 2 == 1)
+                u_current[i][j] = u_previous[i][j] + (omega / 4.0) * (u_current[i - 1][j] + u_current[i + 1][j] + u_current[i][j - 1] + u_current[i][j + 1] - 4 * u_previous[i][j]);
+}
+
 int main(int argc, char **argv) {
     int rank, size;
     int global[2], local[2]; //global matrix dimensions and local matrix dimensions (2D-domain, 2D-subdomain)
@@ -106,8 +122,6 @@ int main(int argc, char **argv) {
                 scatteroffset[i * grid[1] + j] = (local[0] * local[1] * grid[1] * i + local[1] * j);
             }
     }
-
-    //----Rank 0 scatters the global matrix----//
 
     //----Rank 0 scatters the global matrix----//
 

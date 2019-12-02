@@ -162,61 +162,60 @@ int main(int argc, char **argv) {
     gettimeofday(&tts, NULL);
 #ifdef TEST_CONV
     for (t = 0; t < T && !global_converged; t++) {
-#endif
-#ifndef TEST_CONV
+#else
 #undef T
 #define T 256
-        for (t = 0; t < T; t++) {
+    for (t = 0; t < T; t++) {
 #endif
-
-            // TODO
-
-            /*Fill your code here*/
-
-            /*Compute and Communicate*/
-
-            /*Add appropriate timers for computation*/
-
-#ifdef TEST_CONV
-            if (t % C == 0) {
-                // TODO
-                /*Test convergence*/
-            }
-#endif
-
-            //************************************//
-        }
-        gettimeofday(&ttf, NULL);
-
-        ttotal = (ttf.tv_sec - tts.tv_sec) + (ttf.tv_usec - tts.tv_usec) * 0.000001;
-
-        MPI_Reduce(&ttotal, &total_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-        MPI_Reduce(&tcomp, &comp_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-
-        //----Rank 0 gathers local matrices back to the global matrix----//
-
-        if (rank == 0) {
-            U = allocate2d(global_padded[0], global_padded[1]);
-        }
 
         // TODO
 
         /*Fill your code here*/
 
+        /*Compute and Communicate*/
+
+        /*Add appropriate timers for computation*/
+
+#ifdef TEST_CONV
+        if (t % C == 0) {
+            // TODO
+            /*Test convergence*/
+        }
+#endif
+
         //************************************//
+    }
+    gettimeofday(&ttf, NULL);
 
-        //----Printing results----//
+    ttotal = (ttf.tv_sec - tts.tv_sec) + (ttf.tv_usec - tts.tv_usec) * 0.000001;
 
-        if (rank == 0) {
-            printf("Jacobi X %d Y %d Px %d Py %d Iter %d ComputationTime %lf TotalTime %lf midpoint %lf\n", global[0], global[1], grid[0], grid[1], t, comp_time, total_time, U[global[0] / 2][global[1] / 2]);
+    MPI_Reduce(&ttotal, &total_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    MPI_Reduce(&tcomp, &comp_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+
+    //----Rank 0 gathers local matrices back to the global matrix----//
+
+    if (rank == 0) {
+        U = allocate2d(global_padded[0], global_padded[1]);
+    }
+
+    // TODO
+
+    /*Fill your code here*/
+
+    //************************************//
+
+    //----Printing results----//
+
+    if (rank == 0) {
+        printf("Jacobi X %d Y %d Px %d Py %d Iter %d ComputationTime %lf TotalTime %lf midpoint %lf\n", global[0], global[1], grid[0], grid[1], t, comp_time, total_time, U[global[0] / 2][global[1] / 2]);
 
 #ifdef PRINT_RESULTS
-            char *s = malloc(50 * sizeof(char));
-            sprintf(s, "resJacobiMPI_%dx%d_%dx%d", global[0], global[1], grid[0], grid[1]);
-            fprint2d(s, U, global[0], global[1]);
-            free(s);
+        char *s = malloc(50 * sizeof(char));
+        sprintf(s, "resJacobiMPI_%dx%d_%dx%d", global[0], global[1], grid[0], grid[1]);
+        fprint2d(s, U, global[0], global[1]);
+        free(s);
 #endif
-        }
-        MPI_Finalize();
-        return 0;
     }
+    MPI_Finalize();
+    return 0;
+}
