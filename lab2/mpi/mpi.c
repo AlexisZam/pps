@@ -280,13 +280,37 @@ int main(int argc, char **argv) {
     u_previous = u_current;
     u_current = swap;
 
-    gettimeofday(&tcs, NULL);
+    for (int j = 0; j < 2; j++) {
+        gettimeofday(&tcs, NULL);
 
-    RedSOR(u_previous, u_current, i_min, i_max, j_min, j_max, omega);
-    BlackSOR(u_previous, u_current, i_min, i_max, j_min, j_max, omega);
+        if (j == 0)
+            RedSOR(u_previous, u_current, i_min, i_max, j_min, j_max, omega);
+        else
+            BlackSOR(u_previous, u_current, i_min, i_max, j_min, j_max, omega);
 
-    gettimeofday(&tcf, NULL);
-    tcomp += (tcf.tv_sec - tcs.tv_sec) + (tcf.tv_usec - tcs.tv_usec) * 0.000001;
+        gettimeofday(&tcf, NULL);
+        tcomp += (tcf.tv_sec - tcs.tv_sec) + (tcf.tv_usec - tcs.tv_usec) * 0.000001;
+
+        MPI_Request array_of_requests[8];
+        int i = 0;
+        if (north != MPI_PROC_NULL) {
+            MPI_Isend(u_current[1] + 1, 1, local_row, north, 0, CART_COMM, &array_of_requests[i++]);
+            MPI_Irecv(u_current[0] + 1, 1, local_row, north, 0, CART_COMM, &array_of_requests[i++]);
+        }
+        if (south != MPI_PROC_NULL) {
+            MPI_Isend(u_current[local[0]] + 1, 1, local_row, south, 0, CART_COMM, &array_of_requests[i++]);
+            MPI_Irecv(u_current[local[0] + 1] + 1, 1, local_row, south, 0, CART_COMM, &array_of_requests[i++]);
+        }
+        if (east != MPI_PROC_NULL) {
+            MPI_Isend(&u_current[1][local[1]], 1, local_col, east, 0, CART_COMM, &array_of_requests[i++]);
+            MPI_Irecv(&u_current[1][local[1] + 1], 1, local_col, east, 0, CART_COMM, &array_of_requests[i++]);
+        }
+        if (west != MPI_PROC_NULL) {
+            MPI_Isend(&u_current[1][1], 1, local_col, west, 0, CART_COMM, &array_of_requests[i++]);
+            MPI_Irecv(u_current[1], 1, local_col, west, 0, CART_COMM, &array_of_requests[i++]);
+        }
+        MPI_Waitall(i, array_of_requests, NULL);
+    }
 #endif
 
         /*Compute and Communicate*/
