@@ -159,6 +159,11 @@ int main(int argc, char **argv) {
 
     //----Define datatypes or allocate buffers for message passing----//
 
+    MPI_Datatype local_row;
+    MPI_Type_contiguous(local[1], MPI_DOUBLE, &dummy);
+    MPI_Type_create_resized(dummy, 0, sizeof(double), &local_row);
+    MPI_Type_commit(&local_row);
+
     MPI_Datatype local_col;
     MPI_Type_vector(local[0], 1, local[1] + 2, MPI_DOUBLE, &dummy);
     MPI_Type_create_resized(dummy, 0, sizeof(double), &local_col);
@@ -218,15 +223,14 @@ int main(int argc, char **argv) {
         tcomp += (tcf.tv_sec - tcs.tv_sec) + (tcf.tv_usec - tcs.tv_usec) * 0.000001;
 
         MPI_Request array_of_requests[8];
-        MPI_Status array_of_statuses[8];
         int i = 0;
         if (north != MPI_PROC_NULL) {
-            MPI_Isend(u_current[1] + 1, local[1], MPI_DOUBLE, north, 0, CART_COMM, &array_of_requests[i++]);
-            MPI_Irecv(u_current[0] + 1, local[1], MPI_DOUBLE, north, 0, CART_COMM, &array_of_requests[i++]);
+            MPI_Isend(u_current[1] + 1, 1, local_row, north, 0, CART_COMM, &array_of_requests[i++]);
+            MPI_Irecv(u_current[0] + 1, 1, local_row, north, 0, CART_COMM, &array_of_requests[i++]);
         }
         if (south != MPI_PROC_NULL) {
-            MPI_Isend(u_current[local[0]] + 1, local[1], MPI_DOUBLE, south, 0, CART_COMM, &array_of_requests[i++]);
-            MPI_Irecv(u_current[local[0] + 1] + 1, local[1], MPI_DOUBLE, south, 0, CART_COMM, &array_of_requests[i++]);
+            MPI_Isend(u_current[local[0]] + 1, 1, local_row, south, 0, CART_COMM, &array_of_requests[i++]);
+            MPI_Irecv(u_current[local[0] + 1] + 1, 1, local_row, south, 0, CART_COMM, &array_of_requests[i++]);
         }
         if (east != MPI_PROC_NULL) {
             MPI_Isend(&u_current[1][local[1]], 1, local_col, east, 0, CART_COMM, &array_of_requests[i++]);
@@ -236,20 +240,19 @@ int main(int argc, char **argv) {
             MPI_Isend(&u_current[1][1], 1, local_col, west, 0, CART_COMM, &array_of_requests[i++]);
             MPI_Irecv(u_current[1], 1, local_col, west, 0, CART_COMM, &array_of_requests[i++]);
         }
-        MPI_Waitall(i, array_of_requests, array_of_statuses);
+        MPI_Waitall(i, array_of_requests, NULL);
 #elif defined(GAUSS_SEIDEL_SOR)
         swap = u_previous;
         u_previous = u_current;
         u_current = swap;
 
         MPI_Request array_of_requests[6];
-        MPI_Status array_of_statuses[6];
         int i = 0;
         if (north != MPI_PROC_NULL)
-            MPI_Irecv(u_current[0] + 1, local[1], MPI_DOUBLE, north, 0, CART_COMM, &array_of_requests[i++]);
+            MPI_Irecv(u_current[0] + 1, 1, local_row, north, 0, CART_COMM, &array_of_requests[i++]);
         if (west != MPI_PROC_NULL)
             MPI_Irecv(u_current[1], 1, local_col, west, 0, CART_COMM, &array_of_requests[i++]);
-        MPI_Waitall(i, array_of_requests, array_of_statuses);
+        MPI_Waitall(i, array_of_requests, NULL);
 
         gettimeofday(&tcs, NULL);
 
@@ -260,10 +263,10 @@ int main(int argc, char **argv) {
 
         i = 0;
         if (north != MPI_PROC_NULL)
-            MPI_Isend(u_current[1] + 1, local[1], MPI_DOUBLE, north, 0, CART_COMM, &array_of_requests[i++]);
+            MPI_Isend(u_current[1] + 1, 1, local_row, north, 0, CART_COMM, &array_of_requests[i++]);
         if (south != MPI_PROC_NULL) {
-            MPI_Isend(u_current[local[0]] + 1, local[1], MPI_DOUBLE, south, 0, CART_COMM, &array_of_requests[i++]);
-            MPI_Irecv(u_current[local[0] + 1] + 1, local[1], MPI_DOUBLE, south, 0, CART_COMM, &array_of_requests[i++]);
+            MPI_Isend(u_current[local[0]] + 1, 1, local_row, south, 0, CART_COMM, &array_of_requests[i++]);
+            MPI_Irecv(u_current[local[0] + 1] + 1, 1, local_row, south, 0, CART_COMM, &array_of_requests[i++]);
         }
         if (east != MPI_PROC_NULL) {
             MPI_Isend(&u_current[1][local[1]], 1, local_col, east, 0, CART_COMM, &array_of_requests[i++]);
@@ -271,44 +274,19 @@ int main(int argc, char **argv) {
         }
         if (west != MPI_PROC_NULL)
             MPI_Isend(&u_current[1][1], 1, local_col, west, 0, CART_COMM, &array_of_requests[i++]);
-        MPI_Waitall(i, array_of_requests, array_of_statuses);
+        MPI_Waitall(i, array_of_requests, NULL);
 #elif defined(RED_BLACK_SOR)
-    if (t % 2 == 0) {
-        swap = u_previous;
-        u_previous = u_current;
-        u_current = swap;
-    }
+    swap = u_previous;
+    u_previous = u_current;
+    u_current = swap;
 
     gettimeofday(&tcs, NULL);
 
-    if (t % 2 == 0)
-        RedSOR(u_previous, u_current, i_min, i_max, j_min, j_max, omega);
-    else
-        BlackSOR(u_previous, u_current, i_min, i_max, j_min, j_max, omega);
+    RedSOR(u_previous, u_current, i_min, i_max, j_min, j_max, omega);
+    BlackSOR(u_previous, u_current, i_min, i_max, j_min, j_max, omega);
 
     gettimeofday(&tcf, NULL);
     tcomp += (tcf.tv_sec - tcs.tv_sec) + (tcf.tv_usec - tcs.tv_usec) * 0.000001;
-
-    MPI_Request array_of_requests[8];
-    MPI_Status array_of_statuses[8];
-    int i = 0;
-    if (north != MPI_PROC_NULL) {
-        MPI_Isend(u_current[1] + 1, local[1], MPI_DOUBLE, north, 0, CART_COMM, &array_of_requests[i++]);
-        MPI_Irecv(u_current[0] + 1, local[1], MPI_DOUBLE, north, 0, CART_COMM, &array_of_requests[i++]);
-    }
-    if (south != MPI_PROC_NULL) {
-        MPI_Isend(u_current[local[0]] + 1, local[1], MPI_DOUBLE, south, 0, CART_COMM, &array_of_requests[i++]);
-        MPI_Irecv(u_current[local[0] + 1] + 1, local[1], MPI_DOUBLE, south, 0, CART_COMM, &array_of_requests[i++]);
-    }
-    if (east != MPI_PROC_NULL) {
-        MPI_Isend(&u_current[1][local[1]], 1, local_col, east, 0, CART_COMM, &array_of_requests[i++]);
-        MPI_Irecv(&u_current[1][local[1] + 1], 1, local_col, east, 0, CART_COMM, &array_of_requests[i++]);
-    }
-    if (west != MPI_PROC_NULL) {
-        MPI_Isend(&u_current[1][1], 1, local_col, west, 0, CART_COMM, &array_of_requests[i++]);
-        MPI_Irecv(u_current[1], 1, local_col, west, 0, CART_COMM, &array_of_requests[i++]);
-    }
-    MPI_Waitall(i, array_of_requests, array_of_statuses);
 #endif
 
         /*Compute and Communicate*/
