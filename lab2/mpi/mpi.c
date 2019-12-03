@@ -146,8 +146,8 @@ int main(int argc, char **argv) {
 
     //----Rank 0 scatters the global matrix----//
 
-    MPI_Scatterv(rank == 0 ? U[0] : NULL, scattercounts, scatteroffset, global_block, &u_previous[1][1], 1, local_block, 0, CART_COMM);
-    memcpy(u_current[0], u_previous[0], (local[0] + 2) * (local[1] + 2) * sizeof(double));
+    MPI_Scatterv(rank == 0 ? U[0] : NULL, scattercounts, scatteroffset, global_block, &u_current[1][1], 1, local_block, 0, CART_COMM);
+    memcpy(u_previous[0], u_current[0], (local[0] + 2) * (local[1] + 2) * sizeof(double));
 
     /*Make sure u_current and u_previous are
 		both initialized*/
@@ -296,7 +296,7 @@ int main(int argc, char **argv) {
 #ifdef TEST_CONV
         if (t % C == 0) {
             converged = converge(u_previous, u_current, local[0] + 2, local[1] + 2);
-            MPI_Allreduce(&converged, &global_converged, 1, MPI_INT, MPI_MIN, MPI_COMM_WORLD);
+            MPI_Allreduce(&converged, &global_converged, 1, MPI_INT, MPI_LAND, MPI_COMM_WORLD);
             /*Test convergence*/
         }
 #endif
