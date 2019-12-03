@@ -116,7 +116,6 @@ int main(int argc, char **argv) {
     //----Distribute global 2D-domain from rank 0 to all processes----//
 
     //----Appropriate datatypes are defined here----//
-    /*****The usage of datatypes is optional*****/
 
     //----Datatype definition for the 2D-subdomain on the global matrix----//
 
@@ -149,9 +148,6 @@ int main(int argc, char **argv) {
     MPI_Scatterv(rank == 0 ? U[0] : NULL, scattercounts, scatteroffset, global_block, &u_current[1][1], 1, local_block, 0, CART_COMM);
     memcpy(u_previous[0], u_current[0], (local[0] + 2) * (local[1] + 2) * sizeof(double));
 
-    /*Make sure u_current and u_previous are
-		both initialized*/
-
     //************************************//
 
     if (rank == 0)
@@ -178,9 +174,6 @@ int main(int argc, char **argv) {
     MPI_Cart_shift(CART_COMM, 0, 1, &north, &south);
     MPI_Cart_shift(CART_COMM, 1, 1, &west, &east);
 
-    /*Make sure you handle non-existing
-		neighbors appropriately*/
-
     //************************************//
 
     //---Define the iteration ranges per process-----//
@@ -191,12 +184,6 @@ int main(int argc, char **argv) {
     i_max = rank_grid[0] == grid[0] - 1 ? local[0] - (global_padded[0] - global[0]) : local[0] + 1;
     j_min = rank_grid[1] == 0 ? 2 : 1;
     j_max = rank_grid[1] == grid[1] - 1 ? local[1] - (global_padded[1] - global[1]) : local[1] + 1;
-
-    /*Three types of ranges:
-		-internal processes
-		-boundary processes
-		-boundary processes and padded global array
-	*/
 
     //************************************//
 
@@ -313,15 +300,10 @@ int main(int argc, char **argv) {
     }
 #endif
 
-        /*Compute and Communicate*/
-
-        /*Add appropriate timers for computation*/
-
 #ifdef TEST_CONV
         if (t % C == 0) {
             converged = converge(u_previous, u_current, local[0] + 2, local[1] + 2);
             MPI_Allreduce(&converged, &global_converged, 1, MPI_INT, MPI_LAND, MPI_COMM_WORLD);
-            /*Test convergence*/
         }
 #endif
 
