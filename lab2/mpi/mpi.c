@@ -44,14 +44,22 @@ int main(int argc, char **argv) {
     int global_padded[2];    //padded global matrix dimensions (if padding is not needed, global_padded=global)
     int grid[2];             //processor grid dimensions
     int i, j, t;
+#ifdef TEST_CONV
     int global_converged = 0, converged = 0; //flags for convergence, global and per process
-    MPI_Datatype dummy;                      //dummy datatype used to align user-defined datatypes in memory
+#endif
+    MPI_Datatype dummy; //dummy datatype used to align user-defined datatypes in memory
 #if defined(GAUSS_SEIDEL_SOR) || defined(RED_BLACK_SOR)
     double omega; //relaxation factor - useless for Jacobi
 #endif
 
-    struct timeval tts, ttf, tcs, tcf; //Timers: total-> tts,ttf, computation -> tcs,tcf
+    struct timeval tts, ttf, tcs, tcf; //Timers: total -> tts,ttf, computation -> tcs,tcf, convergence -> tcvs, tcvf
+#ifdef TEST_CONV
+    struct timeval tcvs, tcvf;
+#endif
     double ttotal = 0, tcomp = 0, total_time, comp_time;
+#ifdef TEST_CONV
+    double tconv = 0, conv_time;
+#endif
 
     double **U = NULL, **u_current, **u_previous, **swap; //Global matrix, local current and previous matrices, pointer to swap between current and previous
 
@@ -302,8 +310,11 @@ int main(int argc, char **argv) {
 
 #ifdef TEST_CONV
         if (t % C == 0) {
+            gettimeofday(&tcvs, NULL);
             converged = converge(u_previous, u_current, local[0] + 2, local[1] + 2);
             MPI_Allreduce(&converged, &global_converged, 1, MPI_INT, MPI_LAND, MPI_COMM_WORLD);
+            gettimeofday(&tcvf, NULL);
+            tconv += (tcvf.tv_sec - tcvs.tv_sec) + (tcvf.tv_usec - tcvs.tv_usec) * 0.000001;
         }
 #endif
 
@@ -315,6 +326,9 @@ int main(int argc, char **argv) {
 
     MPI_Reduce(&ttotal, &total_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
     MPI_Reduce(&tcomp, &comp_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+#ifdef TEST_CONV
+    MPI_Reduce(&tconv, &conv_time, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+#endif
 
     //----Rank 0 gathers local matrices back to the global matrix----//
 
@@ -336,7 +350,11 @@ int main(int argc, char **argv) {
 #elif defined(RED_BLACK_SOR)
     char name[] = "RedBlackSOR";
 #endif
-        printf("%s X %d Y %d Px %d Py %d Iter %d ComputationTime %lf TotalTime %lf midpoint %lf\n", name, global[0], global[1], grid[0], grid[1], t, comp_time, total_time, U[global[0] / 2][global[1] / 2]);
+        printf("%s X %d Y %d Px %d Py %d Iter %d ComputationTime %lf TotalTime %lf ", name, global[0], global[1], grid[0], grid[1], t, comp_time, total_time);
+#ifdef TEST_CONV
+        printf("ConvergenceTime %lf ", conv_time);
+#endif
+        printf("midpoint %lf\n", U[global[0] / 2][global[1] / 2]);
 
 #ifdef PRINT_RESULTS
         char *s = malloc(50 * sizeof(char));

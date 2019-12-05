@@ -18,7 +18,10 @@ int main(int argc, char **argv) {
     double **swap;
     struct timeval tts, ttf;
     double time = 0;
-    int t, converged = 0;
+    int t;
+#ifdef TEST_CONV
+    int converged = 0;
+#endif
 
     //read 2D-domain dimensions
     if (argc < 2) {
