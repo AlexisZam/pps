@@ -48,37 +48,36 @@ int main(int argc, char **argv) {
 //computational core
 #ifdef TEST_CONV
     for (t = 0; t < T && !converged; t++) {
-#endif
-#ifndef TEST_CONV
+#elif
 #undef T
 #define T 256
-        for (t = 0; t < T; t++) {
+    for (t = 0; t < T; t++) {
 #endif
-            swap = u_previous;
-            u_previous = u_current;
-            u_current = swap;
+        swap = u_previous;
+        u_previous = u_current;
+        u_current = swap;
 
-            gettimeofday(&tts, NULL);
+        gettimeofday(&tts, NULL);
 
-            GaussSeidel(u_previous, u_current, 1, X - 1, 1, Y - 1, omega);
+        GaussSeidel(u_previous, u_current, 1, X - 1, 1, Y - 1, omega);
 
-            gettimeofday(&ttf, NULL);
-            time += (ttf.tv_sec - tts.tv_sec) + (ttf.tv_usec - tts.tv_usec) * 0.000001;
+        gettimeofday(&ttf, NULL);
+        time += (ttf.tv_sec - tts.tv_sec) + (ttf.tv_usec - tts.tv_usec) * 0.000001;
 
 #ifdef TEST_CONV
-            if (t % C == 0)
-                converged = converge(u_previous, u_current, X, Y);
+        if (t % C == 0)
+            converged = converge(u_previous, u_current, X, Y);
 #endif
-        }
+    }
 
-        printf("GaussSeidelSOR X %d Y %d Iter %d Time %lf midpoint %lf\n", X, Y, t - 1, time, u_current[X / 2][Y / 2]);
+    printf("GaussSeidelSOR X %d Y %d Iter %d Time %lf midpoint %lf\n", X, Y, t - 1, time, u_current[X / 2][Y / 2]);
 
 #ifdef PRINT_RESULTS
-        char *s = malloc(50 * sizeof(char));
-        sprintf(s, "resGaussSeidelSORNaive_%dx%d", X, Y);
-        fprint2d(s, u_current, X, Y);
-        free(s);
+    char *s = malloc(50 * sizeof(char));
+    sprintf(s, "resGaussSeidelSORNaive_%dx%d", X, Y);
+    fprint2d(s, u_current, X, Y);
+    free(s);
 #endif
 
-        return 0;
-    }
+    return 0;
+}
