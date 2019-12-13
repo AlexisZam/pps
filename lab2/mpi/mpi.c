@@ -352,13 +352,13 @@ int main(int argc, char **argv) {
 
     if (rank == 0) {
 #if defined(JACOBI)
-        char name[] = "Jacobi";
+        char exe[] = "Jacobi";
 #elif defined(GAUSS_SEIDEL_SOR)
-        char name[] = "GaussSeidelSOR";
+        char exe[] = "GaussSeidelSOR";
 #elif defined(RED_BLACK_SOR)
-    char name[] = "RedBlackSOR";
+    char exe[] = "RedBlackSOR";
 #endif
-        printf("%s X %d Y %d Px %d Py %d Iter %d ComputationTime %lf TotalTime %lf ", name, global[0], global[1], grid[0], grid[1], t, comp_time, total_time);
+        printf("%s X %d Y %d Px %d Py %d Iter %d ComputationTime %lf TotalTime %lf ", exe, global[0], global[1], grid[0], grid[1], t, comp_time, total_time);
 #ifdef TEST_CONV
         printf("ConvergenceTime %lf ", conv_time);
 #endif
@@ -366,7 +366,7 @@ int main(int argc, char **argv) {
 
 #ifdef PRINT_RESULTS
         char *s = malloc(50 * sizeof(char));
-        sprintf(s, "res%sMPI_%dx%d_%dx%d", name, global[0], global[1], grid[0], grid[1]);
+        sprintf(s, "res%sMPI_%dx%d_%dx%d", exe, global[0], global[1], grid[0], grid[1]);
         fprint2d(s, U, global[0], global[1]);
         free(s);
 #endif
