@@ -81,7 +81,7 @@ int main(int argc, char **argv) {
         printf("RedBlackSOR X %d Y %d Iter %d Time %lf midpoint %lf\n", X, Y, t - 1, time, u_current[X / 2][Y / 2]);
 
 #ifdef PRINT_RESULTS
-        char *s = malloc(30 * sizeof(char));
+        char *s = malloc(50 * sizeof(char));
         sprintf(s, "resRedBlackSORNaive_%dx%d", X, Y);
         fprint2d(s, u_current, X, Y);
         free(s);

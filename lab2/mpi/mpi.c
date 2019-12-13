@@ -21,19 +21,19 @@ void GaussSeidel(double **u_previous, double **u_current, int X_min, int X_max, 
             u_current[i][j] = u_previous[i][j] + (u_current[i - 1][j] + u_previous[i + 1][j] + u_current[i][j - 1] + u_previous[i][j + 1] - 4 * u_previous[i][j]) * omega / 4.0;
 }
 #elif defined(RED_BLACK_SOR)
-void RedSOR(double **u_previous, double **u_current, int X_min, int X_max, int Y_min, int Y_max, double omega) {
+void RedSOR(double **u_previous, double **u_current, int X_min, int X_max, int Y_min, int Y_max, double omega, int correction) {
     int i, j;
     for (i = X_min; i < X_max; i++)
         for (j = Y_min; j < Y_max; j++)
-            if ((i + j) % 2 == 0)
+            if ((i + j + correction) % 2 == 0)
                 u_current[i][j] = u_previous[i][j] + (omega / 4.0) * (u_previous[i - 1][j] + u_previous[i + 1][j] + u_previous[i][j - 1] + u_previous[i][j + 1] - 4 * u_previous[i][j]);
 }
 
-void BlackSOR(double **u_previous, double **u_current, int X_min, int X_max, int Y_min, int Y_max, double omega) {
+void BlackSOR(double **u_previous, double **u_current, int X_min, int X_max, int Y_min, int Y_max, double omega, int correction) {
     int i, j;
     for (i = X_min; i < X_max; i++)
         for (j = Y_min; j < Y_max; j++)
-            if ((i + j) % 2 == 1)
+            if ((i + j + correction) % 2 == 1)
                 u_current[i][j] = u_previous[i][j] + (omega / 4.0) * (u_current[i - 1][j] + u_current[i + 1][j] + u_current[i][j - 1] + u_current[i][j + 1] - 4 * u_previous[i][j]);
 }
 #endif
@@ -52,7 +52,7 @@ int main(int argc, char **argv) {
     double omega; //relaxation factor - useless for Jacobi
 #endif
 
-    struct timeval tts, ttf, tcs, tcf; //Timers: total -> tts,ttf, computation -> tcs,tcf, convergence -> tcvs, tcvf
+    struct timeval tts, ttf, tcs, tcf; //Timers: total-> tts,ttf, computation -> tcs,tcf, convergence -> tcvs, tcvf
 #ifdef TEST_CONV
     struct timeval tcvs, tcvf;
 #endif
@@ -186,12 +186,16 @@ int main(int argc, char **argv) {
 
     //---Define the iteration ranges per process-----//
 
-    int i_min, i_max, j_min, j_max;
+    int min[2], max[2];
 
-    i_min = rank_grid[0] == 0 ? 2 : 1;
-    i_max = rank_grid[0] == grid[0] - 1 ? local[0] - (global_padded[0] - global[0]) : local[0] + 1;
-    j_min = rank_grid[1] == 0 ? 2 : 1;
-    j_max = rank_grid[1] == grid[1] - 1 ? local[1] - (global_padded[1] - global[1]) : local[1] + 1;
+    for (i = 0; i < 2; i++) {
+        min[i] = rank_grid[i] == 0 ? 2 : 1;
+        max[i] = local[i] + 1;
+        if (grid[i] - rank_grid[i] < (global_padded[i] - global[i]) / local[i] + 1)
+            max[i] = 1;
+        else if (grid[i] - rank_grid[i] == (global_padded[i] - global[i]) / local[i] + 1)
+            max[i] = local[i] - (global_padded[i] - global[i]) % local[i];
+    }
 
     //************************************//
 
@@ -212,99 +216,103 @@ int main(int argc, char **argv) {
 
         gettimeofday(&tcs, NULL);
 
-        Jacobi(u_previous, u_current, i_min, i_max, j_min, j_max);
+        Jacobi(u_previous, u_current, min[0], max[0], min[1], max[1]);
 
         gettimeofday(&tcf, NULL);
         tcomp += (tcf.tv_sec - tcs.tv_sec) + (tcf.tv_usec - tcs.tv_usec) * 0.000001;
 
         MPI_Request array_of_requests[8];
-        int i = 0;
+        i = 0;
         if (north != MPI_PROC_NULL) {
-            MPI_Isend(u_current[1] + 1, 1, local_row, north, 0, CART_COMM, &array_of_requests[i++]);
-            MPI_Irecv(u_current[0] + 1, 1, local_row, north, 0, CART_COMM, &array_of_requests[i++]);
+#define DUMMY_TAG 0
+            MPI_Isend(u_current[1] + 1, 1, local_row, north, DUMMY_TAG, CART_COMM, &array_of_requests[i++]);
+            MPI_Irecv(u_current[0] + 1, 1, local_row, north, MPI_ANY_TAG, CART_COMM, &array_of_requests[i++]);
         }
         if (south != MPI_PROC_NULL) {
-            MPI_Isend(u_current[local[0]] + 1, 1, local_row, south, 0, CART_COMM, &array_of_requests[i++]);
-            MPI_Irecv(u_current[local[0] + 1] + 1, 1, local_row, south, 0, CART_COMM, &array_of_requests[i++]);
+            MPI_Isend(u_current[local[0]] + 1, 1, local_row, south, DUMMY_TAG, CART_COMM, &array_of_requests[i++]);
+            MPI_Irecv(u_current[local[0] + 1] + 1, 1, local_row, south, MPI_ANY_TAG, CART_COMM, &array_of_requests[i++]);
         }
         if (east != MPI_PROC_NULL) {
-            MPI_Isend(&u_current[1][local[1]], 1, local_col, east, 0, CART_COMM, &array_of_requests[i++]);
-            MPI_Irecv(&u_current[1][local[1] + 1], 1, local_col, east, 0, CART_COMM, &array_of_requests[i++]);
+            MPI_Isend(&u_current[1][local[1]], 1, local_col, east, DUMMY_TAG, CART_COMM, &array_of_requests[i++]);
+            MPI_Irecv(&u_current[1][local[1] + 1], 1, local_col, east, MPI_ANY_TAG, CART_COMM, &array_of_requests[i++]);
         }
         if (west != MPI_PROC_NULL) {
-            MPI_Isend(&u_current[1][1], 1, local_col, west, 0, CART_COMM, &array_of_requests[i++]);
-            MPI_Irecv(u_current[1], 1, local_col, west, 0, CART_COMM, &array_of_requests[i++]);
+            MPI_Isend(&u_current[1][1], 1, local_col, west, DUMMY_TAG, CART_COMM, &array_of_requests[i++]);
+            MPI_Irecv(u_current[1], 1, local_col, west, MPI_ANY_TAG, CART_COMM, &array_of_requests[i++]);
         }
-        MPI_Waitall(i, array_of_requests, NULL);
+        MPI_Waitall(i, array_of_requests, MPI_STATUSES_IGNORE);
 #elif defined(GAUSS_SEIDEL_SOR)
         swap = u_previous;
         u_previous = u_current;
         u_current = swap;
 
         MPI_Request array_of_requests[6];
-        int i = 0;
+        i = 0;
         if (north != MPI_PROC_NULL)
-            MPI_Irecv(u_current[0] + 1, 1, local_row, north, 0, CART_COMM, &array_of_requests[i++]);
+            MPI_Irecv(u_current[0] + 1, 1, local_row, north, MPI_ANY_TAG, CART_COMM, &array_of_requests[i++]);
         if (west != MPI_PROC_NULL)
-            MPI_Irecv(u_current[1], 1, local_col, west, 0, CART_COMM, &array_of_requests[i++]);
-        MPI_Waitall(i, array_of_requests, NULL);
+            MPI_Irecv(u_current[1], 1, local_col, west, MPI_ANY_TAG, CART_COMM, &array_of_requests[i++]);
+        MPI_Waitall(i, array_of_requests, MPI_STATUSES_IGNORE);
 
         gettimeofday(&tcs, NULL);
 
-        GaussSeidel(u_previous, u_current, i_min, i_max, j_min, j_max, omega);
+        GaussSeidel(u_previous, u_current, min[0], max[0], min[1], max[1], omega);
 
         gettimeofday(&tcf, NULL);
         tcomp += (tcf.tv_sec - tcs.tv_sec) + (tcf.tv_usec - tcs.tv_usec) * 0.000001;
 
         i = 0;
         if (north != MPI_PROC_NULL)
-            MPI_Isend(u_current[1] + 1, 1, local_row, north, 0, CART_COMM, &array_of_requests[i++]);
+#define DUMMY_TAG 0
+            MPI_Isend(u_current[1] + 1, 1, local_row, north, DUMMY_TAG, CART_COMM, &array_of_requests[i++]);
         if (south != MPI_PROC_NULL) {
-            MPI_Isend(u_current[local[0]] + 1, 1, local_row, south, 0, CART_COMM, &array_of_requests[i++]);
-            MPI_Irecv(u_current[local[0] + 1] + 1, 1, local_row, south, 0, CART_COMM, &array_of_requests[i++]);
+            MPI_Isend(u_current[local[0]] + 1, 1, local_row, south, DUMMY_TAG, CART_COMM, &array_of_requests[i++]);
+            MPI_Irecv(u_current[local[0] + 1] + 1, 1, local_row, south, MPI_ANY_TAG, CART_COMM, &array_of_requests[i++]);
         }
         if (east != MPI_PROC_NULL) {
-            MPI_Isend(&u_current[1][local[1]], 1, local_col, east, 0, CART_COMM, &array_of_requests[i++]);
-            MPI_Irecv(&u_current[1][local[1] + 1], 1, local_col, east, 0, CART_COMM, &array_of_requests[i++]);
+            MPI_Isend(&u_current[1][local[1]], 1, local_col, east, DUMMY_TAG, CART_COMM, &array_of_requests[i++]);
+            MPI_Irecv(&u_current[1][local[1] + 1], 1, local_col, east, MPI_ANY_TAG, CART_COMM, &array_of_requests[i++]);
         }
         if (west != MPI_PROC_NULL)
-            MPI_Isend(&u_current[1][1], 1, local_col, west, 0, CART_COMM, &array_of_requests[i++]);
-        MPI_Waitall(i, array_of_requests, NULL);
+            MPI_Isend(&u_current[1][1], 1, local_col, west, DUMMY_TAG, CART_COMM, &array_of_requests[i++]);
+        MPI_Waitall(i, array_of_requests, MPI_STATUSES_IGNORE);
 #elif defined(RED_BLACK_SOR)
     swap = u_previous;
     u_previous = u_current;
     u_current = swap;
 
-    for (int j = 0; j < 2; j++) {
+    for (j = 0; j < 2; j++) {
         gettimeofday(&tcs, NULL);
 
+        int correction = ((local[0] & rank_grid[0]) ^ (local[1] & rank_grid[1])) & 1;
         if (j == 0)
-            RedSOR(u_previous, u_current, i_min, i_max, j_min, j_max, omega);
+            RedSOR(u_previous, u_current, min[0], max[0], min[1], max[1], omega, correction);
         else
-            BlackSOR(u_previous, u_current, i_min, i_max, j_min, j_max, omega);
+            BlackSOR(u_previous, u_current, min[0], max[0], min[1], max[1], omega, correction);
 
         gettimeofday(&tcf, NULL);
         tcomp += (tcf.tv_sec - tcs.tv_sec) + (tcf.tv_usec - tcs.tv_usec) * 0.000001;
 
         MPI_Request array_of_requests[8];
-        int i = 0;
+        i = 0;
         if (north != MPI_PROC_NULL) {
-            MPI_Isend(u_current[1] + 1, 1, local_row, north, 0, CART_COMM, &array_of_requests[i++]);
-            MPI_Irecv(u_current[0] + 1, 1, local_row, north, 0, CART_COMM, &array_of_requests[i++]);
+#define DUMMY_TAG 0
+            MPI_Isend(u_current[1] + 1, 1, local_row, north, DUMMY_TAG, CART_COMM, &array_of_requests[i++]);
+            MPI_Irecv(u_current[0] + 1, 1, local_row, north, MPI_ANY_TAG, CART_COMM, &array_of_requests[i++]);
         }
         if (south != MPI_PROC_NULL) {
-            MPI_Isend(u_current[local[0]] + 1, 1, local_row, south, 0, CART_COMM, &array_of_requests[i++]);
-            MPI_Irecv(u_current[local[0] + 1] + 1, 1, local_row, south, 0, CART_COMM, &array_of_requests[i++]);
+            MPI_Isend(u_current[local[0]] + 1, 1, local_row, south, DUMMY_TAG, CART_COMM, &array_of_requests[i++]);
+            MPI_Irecv(u_current[local[0] + 1] + 1, 1, local_row, south, MPI_ANY_TAG, CART_COMM, &array_of_requests[i++]);
         }
         if (east != MPI_PROC_NULL) {
-            MPI_Isend(&u_current[1][local[1]], 1, local_col, east, 0, CART_COMM, &array_of_requests[i++]);
-            MPI_Irecv(&u_current[1][local[1] + 1], 1, local_col, east, 0, CART_COMM, &array_of_requests[i++]);
+            MPI_Isend(&u_current[1][local[1]], 1, local_col, east, DUMMY_TAG, CART_COMM, &array_of_requests[i++]);
+            MPI_Irecv(&u_current[1][local[1] + 1], 1, local_col, east, MPI_ANY_TAG, CART_COMM, &array_of_requests[i++]);
         }
         if (west != MPI_PROC_NULL) {
-            MPI_Isend(&u_current[1][1], 1, local_col, west, 0, CART_COMM, &array_of_requests[i++]);
-            MPI_Irecv(u_current[1], 1, local_col, west, 0, CART_COMM, &array_of_requests[i++]);
+            MPI_Isend(&u_current[1][1], 1, local_col, west, DUMMY_TAG, CART_COMM, &array_of_requests[i++]);
+            MPI_Irecv(u_current[1], 1, local_col, west, MPI_ANY_TAG, CART_COMM, &array_of_requests[i++]);
         }
-        MPI_Waitall(i, array_of_requests, NULL);
+        MPI_Waitall(i, array_of_requests, MPI_STATUSES_IGNORE);
     }
 #endif
 
