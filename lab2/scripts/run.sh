@@ -15,7 +15,7 @@ do
 		for P in '1 1' '2 1' '2 2' '4 2' '4 4' '8 4' '8 8'
 		do
             read -a P <<< ${P}
-			mpirun -np $((${P[0]} * ${P[1]})) --map-by node --mca btl self,tcp $exe ${X} ${X} ${P[0]} ${P[1]}
+			mpirun -np $((${P[0]} * ${P[1]})) --map-by node --mca btl self,tcp ${exe} ${X} ${X} ${P[0]} ${P[1]}
 		done
 	done
 done
