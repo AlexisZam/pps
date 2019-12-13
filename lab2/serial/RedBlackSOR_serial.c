@@ -55,7 +55,7 @@ int main(int argc, char **argv) {
 
 #ifdef TEST_CONV
     for (t = 0; t < T && !converged; t++) {
-#elif
+#else
 #undef T
 #define T 256
     for (t = 0; t < T; t++) {
