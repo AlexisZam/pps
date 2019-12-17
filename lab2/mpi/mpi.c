@@ -320,8 +320,8 @@ int main(int argc, char **argv) {
         if (t % C == 0) {
             gettimeofday(&tcvs, NULL);
             converged = converge(u_previous, u_current, local[0] + 2, local[1] + 2);
-            MPI_Allreduce(&converged, &global_converged, 1, MPI_INT, MPI_LAND, MPI_COMM_WORLD);
             gettimeofday(&tcvf, NULL);
+            MPI_Allreduce(&converged, &global_converged, 1, MPI_INT, MPI_LAND, MPI_COMM_WORLD);
             tconv += (tcvf.tv_sec - tcvs.tv_sec) + (tcvf.tv_usec - tcvs.tv_usec) * 0.000001;
         }
 #endif
