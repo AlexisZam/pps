@@ -1,5 +1,6 @@
 #include <limits.h>
 #include <pthread.h> /* for pthread_spinlock_t */
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h> /* rand() */
 
@@ -9,13 +10,17 @@
 typedef struct ll_node {
     int key;
     struct ll_node *next;
-    /* other fields here? */
 } ll_node_t;
 
 struct linked_list {
     ll_node_t *head;
     /* other fields here? */
 };
+
+typedef struct window {
+    ll_node_t *curr;
+    ll_node_t *next;
+} window_t;
 
 /**
  * Create a new linked list node.
@@ -26,7 +31,7 @@ static ll_node_t *ll_node_new(int key) {
     XMALLOC(ret, 1);
     ret->key = key;
     ret->next = NULL;
-    /* Other initializations here? */
+    ret->next = (uintptr_t)ret->next << 1 | 0;
 
     return ret;
 }
@@ -63,6 +68,38 @@ void ll_free(ll_t *ll) {
         curr = next;
     }
     XFREE(ll);
+}
+
+window_t find(ll_node_t *head, int key) {
+retry:
+    for (;;) {
+        ll_node_t *prev, *curr, *next;
+        int snip;
+        int marked;
+
+        prev = head;
+        curr = (uintptr_t)prev->next >> 1;
+        for (;;) {
+            next = curr->next;
+            marked = (uintptr_t)next & 1;
+            next = (uintptr_t)next >> 1;
+            while (marked) {
+                snip = prev->next == curr;
+                if (snip)
+                    prev->next = next;
+                if (!snip)
+                    goto retry;
+                curr = next;
+                next = curr->next;
+                marked = (uintptr_t)next & 1;
+                next = (uintptr_t)next >> 1;
+            }
+            if (curr->key >= key)
+                return (window_t){prev, curr};
+            prev = curr;
+            curr = next;
+        }
+    }
 }
 
 int ll_contains(ll_t *ll, int key) {
