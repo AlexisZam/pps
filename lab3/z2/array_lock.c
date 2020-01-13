@@ -1,25 +1,55 @@
 #include "../common/alloc.h"
 #include "lock.h"
 
+#define FALSE 0
+#define TRUE 1
+
+typedef struct {
+    char locked; /* FALSE or TRUE. */
+    char padding[63];
+} array_node_t;
+
 struct lock_struct {
-    /* Delete this in your implementation, just a placeholder. */
-    int dummy;
+    array_node_t *flag;
+    int tail;
+    int size;
 };
+
+__thread int mySlotIndex;
 
 lock_t *lock_init(int nthreads) {
     lock_t *lock;
+    array_node_t *flag;
 
     XMALLOC(lock, 1);
-    /* other initializations here. */
+    XMALLOC(flag, nthreads);
+
+    lock->flag = flag;
+    lock->flag[0].locked = TRUE;
+    lock->tail = 0;
+    lock->size = nthreads;
+
     return lock;
 }
 
 void lock_free(lock_t *lock) {
-    XFREE(lock);
+    lock_t *l = lock;
+    XFREE(l->flag);
+    XFREE(l);
 }
 
 void lock_acquire(lock_t *lock) {
+    lock_t *l = lock;
+
+    mySlotIndex = __sync_fetch_and_add(&l->tail, 1) % l->size;
+
+    while (l->flag[mySlotIndex].locked == FALSE)
+        /* do nothing */;
 }
 
 void lock_release(lock_t *lock) {
+    lock_t *l = lock;
+
+    l->flag[mySlotIndex].locked = FALSE;
+    l->flag[(mySlotIndex + 1) % l->size].locked = TRUE;
 }
