@@ -16,4 +16,4 @@ linked_list: main.c ${LL_FILE} ${SRC_FILES}
 	$(CC) $(CFLAGS) $^ -o $@
 
 clean:
-	rm -f linked_list
+	$(RM) linked_list

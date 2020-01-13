@@ -4,8 +4,6 @@
 #define FALSE 0
 #define TRUE 1
 
-#define FLAG_ENTRY_SIZE 1
-
 typedef struct {
     char locked; /* FALSE or TRUE. */
     char padding[63];
@@ -25,7 +23,6 @@ __thread clh_node_t *myPred;
 lock_t *lock_init(int nthreads) {
     lock_t *lock;
     clh_node_t *tail;
-    int i;
 
     XMALLOC(lock, 1);
     XMALLOC(tail, 1);

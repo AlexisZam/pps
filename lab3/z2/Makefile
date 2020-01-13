@@ -19,4 +19,4 @@ test: test.c $(LOCK_FILE) $(SRC_FILES)
 	$(CC) $(CFLAGS) $^ -o $@
 
 clean:
-	rm -f linked_list test
+	$(RM) linked_list test
