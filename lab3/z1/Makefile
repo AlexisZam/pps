@@ -1,12 +1,12 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -pthread -O0
+CFLAGS = -O0 -Wall -Wextra -pthread
+
+.PHONY = all clean
 
 all: accounts
 
-SRC_FILES= accounts.c ../common/aff.c
-
-accounts: $(SRC_FILES)
+accounts: accounts.c ../common/aff.c
 	$(CC) $(CFLAGS) $^ -o $@
 
 clean:
-	rm -f accounts
+	$(RM) accounts

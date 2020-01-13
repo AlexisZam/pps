@@ -1,21 +1,15 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -pthread -O0
+CFLAGS = -O0 -Wall -Wextra -Wno-unused-function -Wno-unused-parameter -pthread
+LOCK_FILE = nosync_lock.c
 
-## Remove some warnings.
-CFLAGS += -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function
+.PHONY = all clean
 
 all: linked_list test
 
-## Which lock to use?
-LOCK_FILE = nosync_lock.c
-
-## Additional source files
-SRC_FILES = ../common/aff.c
-
-linked_list: main.c $(LOCK_FILE) $(SRC_FILES)
+linked_list: main.c $(LOCK_FILE) ../common/aff.c
 	$(CC) $(CFLAGS) $^ -o $@
 
-test: test.c $(LOCK_FILE) $(SRC_FILES)
+test: test.c $(LOCK_FILE) ../common/aff.c
 	$(CC) $(CFLAGS) $^ -o $@
 
 clean:

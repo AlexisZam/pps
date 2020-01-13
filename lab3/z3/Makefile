@@ -1,18 +1,12 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -pthread
+CFLAGS = -Wall -Wextra -Wno-unused-function -Wno-unused-parameter -pthread
+LL_FILE = ll_serial.c
 
-## Remove some warnings.
-CFLAGS += -Wno-unused-parameter -Wno-unused-variable -Wno-unused-function
+.PHONY = all clean
 
 all: linked_list
 
-## Which linked list implementation to use?
-LL_FILE = ll_serial.c
-
-## Additional source files
-SRC_FILES = ../common/aff.c
-
-linked_list: main.c ${LL_FILE} ${SRC_FILES}
+linked_list: main.c $(LL_FILE) ../common/aff.c
 	$(CC) $(CFLAGS) $^ -o $@
 
 clean:
