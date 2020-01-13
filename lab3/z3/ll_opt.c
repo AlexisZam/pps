@@ -9,12 +9,11 @@
 typedef struct ll_node {
     int key;
     struct ll_node *next;
-    /* other fields here? */
+    pthread_spinlock_t lock;
 } ll_node_t;
 
 struct linked_list {
     ll_node_t *head;
-    /* other fields here? */
 };
 
 /**
@@ -26,7 +25,7 @@ static ll_node_t *ll_node_new(int key) {
     XMALLOC(ret, 1);
     ret->key = key;
     ret->next = NULL;
-    /* Other initializations here? */
+    pthread_spin_init(&ret->lock, PTHREAD_PROCESS_PRIVATE);
 
     return ret;
 }
@@ -35,6 +34,7 @@ static ll_node_t *ll_node_new(int key) {
  * Free a linked list node.
  **/
 static void ll_node_free(ll_node_t *ll_node) {
+    pthread_spin_destroy(&ll_node->lock);
     XFREE(ll_node);
 }
 
@@ -65,16 +65,90 @@ void ll_free(ll_t *ll) {
     XFREE(ll);
 }
 
-int ll_contains(ll_t *ll, int key) {
+int validate(ll_t *ll, ll_node_t *curr, ll_node_t *next) {
+    for (ll_node_t *node = ll->head; node->key <= curr->key; node = node->next)
+        if (node == curr)
+            return curr->next == next;
     return 0;
+}
+
+int ll_contains(ll_t *ll, int key) {
+    for (;;) {
+        ll_node_t *curr = ll->head;
+        int ret = 0;
+
+        while (curr->key < key)
+            curr = curr->next;
+
+        ret = (key == curr->key);
+        return ret;
+    }
 }
 
 int ll_add(ll_t *ll, int key) {
-    return 0;
+    for (;;) {
+        int ret = 0;
+        ll_node_t *curr, *next;
+        ll_node_t *new_node;
+        int validated;
+
+        curr = ll->head;
+        next = curr->next;
+
+        while (next->key < key) {
+            curr = next;
+            next = curr->next;
+        }
+
+        pthread_spin_lock(&curr->lock);
+        pthread_spin_lock(&next->lock);
+        if ((validated = validate(ll, curr, next))) {
+            if (key != next->key) {
+                ret = 1;
+                new_node = ll_node_new(key);
+                new_node->next = next;
+                curr->next = new_node;
+            } else
+                ret = 0;
+        }
+        pthread_spin_unlock(&curr->lock);
+        pthread_spin_unlock(&next->lock);
+
+        if (validated)
+            return ret;
+    }
 }
 
 int ll_remove(ll_t *ll, int key) {
-    return 0;
+    for (;;) {
+        int ret = 0;
+        ll_node_t *curr, *next;
+        int validated;
+
+        curr = ll->head;
+        next = curr->next;
+
+        while (next->key < key) {
+            curr = next;
+            next = curr->next;
+        }
+
+        pthread_spin_lock(&curr->lock);
+        pthread_spin_lock(&next->lock);
+        if ((validated = validate(ll, curr, next))) {
+            if (key == next->key) {
+                ret = 1;
+                curr->next = next->next;
+                ll_node_free(next);
+            } else
+                ret = 0;
+        }
+        pthread_spin_unlock(&curr->lock);
+        pthread_spin_unlock(&next->lock);
+
+        if (validated)
+            return ret;
+    }
 }
 
 /**

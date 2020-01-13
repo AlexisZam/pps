@@ -66,15 +66,58 @@ void ll_free(ll_t *ll) {
 }
 
 int ll_contains(ll_t *ll, int key) {
-    return 0;
+    ll_node_t *curr = ll->head;
+    int ret = 0;
+
+    while (curr->key < key)
+        curr = curr->next;
+
+    ret = (key == curr->key);
+    return ret;
 }
 
 int ll_add(ll_t *ll, int key) {
-    return 0;
+    int ret = 0;
+    ll_node_t *curr, *next;
+    ll_node_t *new_node;
+
+    curr = ll->head;
+    next = curr->next;
+
+    while (next->key < key) {
+        curr = next;
+        next = curr->next;
+    }
+
+    if (key != next->key) {
+        ret = 1;
+        new_node = ll_node_new(key);
+        new_node->next = next;
+        curr->next = new_node;
+    }
+
+    return ret;
 }
 
 int ll_remove(ll_t *ll, int key) {
-    return 0;
+    int ret = 0;
+    ll_node_t *curr, *next;
+
+    curr = ll->head;
+    next = curr->next;
+
+    while (next->key < key) {
+        curr = next;
+        next = curr->next;
+    }
+
+    if (key == next->key) {
+        ret = 1;
+        curr->next = next->next;
+        ll_node_free(next);
+    }
+
+    return ret;
 }
 
 /**

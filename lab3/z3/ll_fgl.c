@@ -9,12 +9,11 @@
 typedef struct ll_node {
     int key;
     struct ll_node *next;
-    /* other fields here? */
+    pthread_spinlock_t lock;
 } ll_node_t;
 
 struct linked_list {
     ll_node_t *head;
-    /* other fields here? */
 };
 
 /**
@@ -26,7 +25,7 @@ static ll_node_t *ll_node_new(int key) {
     XMALLOC(ret, 1);
     ret->key = key;
     ret->next = NULL;
-    /* Other initializations here? */
+    pthread_spin_init(&ret->lock, PTHREAD_PROCESS_PRIVATE);
 
     return ret;
 }
@@ -35,6 +34,7 @@ static ll_node_t *ll_node_new(int key) {
  * Free a linked list node.
  **/
 static void ll_node_free(ll_node_t *ll_node) {
+    pthread_spin_destroy(&ll_node->lock);
     XFREE(ll_node);
 }
 
@@ -66,15 +66,77 @@ void ll_free(ll_t *ll) {
 }
 
 int ll_contains(ll_t *ll, int key) {
-    return 0;
+    ll_node_t *curr = ll->head;
+    int ret = 0;
+
+    pthread_spin_lock(&curr->lock);
+    while (curr->key < key) {
+        pthread_spin_unlock(&curr->lock);
+        curr = curr->next;
+        pthread_spin_lock(&curr->lock);
+    }
+
+    ret = (key == curr->key);
+    pthread_spin_unlock(&curr->lock);
+    return ret;
 }
 
 int ll_add(ll_t *ll, int key) {
-    return 0;
+    int ret = 0;
+    ll_node_t *curr, *next;
+    ll_node_t *new_node;
+
+    pthread_spin_lock(&ll->head->lock);
+    curr = ll->head;
+    next = curr->next;
+    pthread_spin_lock(&next->lock);
+
+    while (next->key < key) {
+        pthread_spin_unlock(&curr->lock);
+        curr = next;
+        next = curr->next;
+        pthread_spin_lock(&next->lock);
+    }
+
+    if (key != next->key) {
+        ret = 1;
+        new_node = ll_node_new(key);
+        new_node->next = next;
+        curr->next = new_node;
+    }
+
+    pthread_spin_unlock(&next->lock);
+    pthread_spin_unlock(&curr->lock);
+
+    return ret;
 }
 
 int ll_remove(ll_t *ll, int key) {
-    return 0;
+    int ret = 0;
+    ll_node_t *curr, *next;
+
+    pthread_spin_lock(&ll->head->lock);
+    curr = ll->head;
+    next = curr->next;
+    pthread_spin_lock(&next->lock);
+
+    while (next->key < key) {
+        pthread_spin_unlock(&curr->lock);
+        curr = next;
+        next = curr->next;
+        pthread_spin_lock(&next->lock);
+    }
+
+    if (key == next->key) {
+        ret = 1;
+        curr->next = next->next;
+        ll_node_free(next);
+    }
+
+    pthread_spin_unlock(&next->lock);
+    pthread_spin_unlock(&curr->lock);
+
+    return ret;
 }
 
 /**

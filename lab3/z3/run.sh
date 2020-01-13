@@ -6,7 +6,7 @@
 #PBS -l nodes=sandman:ppn=64
 #PBS -l walltime=00:10:00
 
-cd /home/parallel/parlab02/pps/lab2/z3
+cd /home/parallel/parlab02/pps/lab3/z3
 for nthreads in 1 2 4 8 16 32 64
 do
     for list_size in 1024 8192
