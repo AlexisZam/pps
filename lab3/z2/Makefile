@@ -12,7 +12,7 @@ LOCK_FILE = nosync_lock.c
 ## Additional source files
 SRC_FILES = ../common/aff.c
 
-linked_list: main.c $(LOCK_FILE) $(SRC_FILES) 
+linked_list: main.c $(LOCK_FILE) $(SRC_FILES)
 	$(CC) $(CFLAGS) $^ -o $@
 
 test: test.c $(LOCK_FILE) $(SRC_FILES)

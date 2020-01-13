@@ -5,7 +5,7 @@ all: accounts
 
 SRC_FILES= accounts.c ../common/aff.c
 
-accounts: $(SRC_FILES) 
+accounts: $(SRC_FILES)
 	$(CC) $(CFLAGS) $^ -o $@
 
 clean:
