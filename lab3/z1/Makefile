@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -O0 -Wall -Wextra -pthread
+CFLAGS = -Wall -Wextra -pthread
 
 .PHONY = all clean
 

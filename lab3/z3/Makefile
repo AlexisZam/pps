@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -Wno-unused-function -Wno-unused-parameter -pthread
-LL_FILE = ll_serial.c
+LL_FILE ?= ll_serial.c
 
 .PHONY = all clean
 
