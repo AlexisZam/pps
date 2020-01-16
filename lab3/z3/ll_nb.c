@@ -8,7 +8,10 @@
 
 typedef struct ll_node {
     int key;
-    struct ll_node *next;
+    union {
+        struct ll_node *next;
+        uintptr_t marked;
+    };
 } ll_node_t;
 
 struct linked_list {
@@ -20,22 +23,34 @@ typedef struct window {
     ll_node_t *curr;
 } window_t;
 
-static inline ll_node_t *get_next(ll_node_t *node, int *marked) {
-    ll_node_t *temp = node->next;
-    *marked = (uintptr_t)temp & 1;
-    return (ll_node_t *)((uintptr_t)temp >> 1);
+static inline ll_node_t *get_next(ll_node_t *node) {
+    ll_node_t temp = *node;
+    temp.marked &= ~1;
+    return temp.next;
 }
 
-static inline ll_node_t *get_next_next(ll_node_t *node) {
-    return (ll_node_t *)((uintptr_t)node->next >> 1);
+static inline ll_node_t *get(ll_node_t *node, int *marked) {
+    *marked = node->marked & 1;
+    return get_next(node);
 }
 
-static inline void set_next(ll_node_t *node, ll_node_t *next) {
-    node->next = (ll_node_t *)((uintptr_t)next << 1);
+static inline int compare_and_set(ll_node_t *node, ll_node_t *expected_reference, ll_node_t *new_reference, int expected_mark, int new_mark) {
+    ll_node_t expected_node, new_node;
+
+    expected_node.next = expected_reference;
+    if (!expected_mark)
+        expected_node.marked &= ~1;
+    new_node.next = new_reference;
+    if (!new_mark)
+        new_node.marked &= ~1;
+
+    return __sync_bool_compare_and_swap(&node->marked, expected_node.marked, new_node.marked);
 }
 
-static inline int get_next_marked(ll_node_t *node) {
-    return (uintptr_t)node->next & 1;
+static inline int attempt_mark(ll_node_t *node, ll_node_t *expected_reference, int new_mark) {
+    int marked;
+    get(node, &marked);
+    return compare_and_set(node, expected_reference, expected_reference, marked, new_mark);
 }
 
 /**
@@ -47,7 +62,7 @@ static ll_node_t *ll_node_new(int key) {
     XMALLOC(ret, 1);
     ret->key = key;
     ret->next = NULL;
-    set_next(ret, ret->next);
+    // ret->marked &= ~1;
 
     return ret;
 }
@@ -86,6 +101,8 @@ void ll_free(ll_t *ll) {
     XFREE(ll);
 }
 
+#define print printf
+
 window_t find(ll_node_t *head, int key) {
 retry:
     for (;;) {
@@ -93,16 +110,14 @@ retry:
         int marked;
 
         prev = head;
-        curr = get_next_next(prev);
+        curr = get_next(prev);
         for (;;) {
-            printf("%p\n", (uintptr_t)curr >> 1);
-            printf("%p\n", curr);
-            next = get_next(curr, &marked);
+            next = get(curr, &marked);
             while (marked) {
-                if (!__sync_bool_compare_and_swap(&prev->next, (uintptr_t)curr << 1, (uintptr_t)next << 1))
+                if (!compare_and_set(prev->next, curr, next, 0, 0))
                     goto retry;
                 curr = next;
-                next = get_next(curr, &marked);
+                next = get(curr, &marked);
             }
             if (curr->key >= key)
                 return (window_t){prev, curr};
@@ -118,7 +133,7 @@ int ll_contains(ll_t *ll, int key) {
 
     while (curr->key < key) {
         curr = curr->next;
-        marked = get_next_marked(curr);
+        get(curr, &marked);
     }
     return key == curr->key && !marked;
 }
@@ -135,8 +150,9 @@ int ll_add(ll_t *ll, int key) {
         if (curr->key != key)
             return 0;
         node = ll_node_new(key);
-        set_next(node, curr);
-        if (__sync_bool_compare_and_swap(&prev->next, (uintptr_t)curr << 1, node))
+        node->next = curr;
+        node->marked &= 0;
+        if (compare_and_set(prev->next, curr, node, 0, 0))
             return 1;
     }
 }
@@ -152,9 +168,9 @@ int ll_remove(ll_t *ll, int key) {
 
         if (curr->key != key)
             return 0;
-        next = get_next_next(curr);
-        if (__sync_bool_compare_and_swap(&curr->next, ((uintptr_t)next << 1) | get_next_marked(curr), ((uintptr_t)curr->next << 1) | 1)) {
-            __sync_bool_compare_and_swap(&prev->next, (uintptr_t)curr << 1, (uintptr_t)next << 1);
+        next = get_next(curr);
+        if (attempt_mark(curr->next, next, 1)) {
+            compare_and_set(prev->next, curr, next, 0, 0);
             return 1;
         }
     }
