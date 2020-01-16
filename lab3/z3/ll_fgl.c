@@ -1,7 +1,6 @@
 #include <limits.h>
 #include <pthread.h> /* for pthread_spinlock_t */
 #include <stdio.h>
-#include <stdlib.h> /* rand() */
 
 #include "../common/alloc.h"
 #include "ll.h"

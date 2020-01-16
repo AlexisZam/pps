@@ -1,7 +1,6 @@
 #include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h> /* rand() */
 
 #include "../common/alloc.h"
 #include "ll.h"
@@ -34,7 +33,11 @@ static inline int get_marked(ll_node_t *node) {
 }
 
 static inline int compare_and_set(ll_node_t *node, ll_node_t *expected_next, ll_node_t *new_next, uintptr_t expected_marked, uintptr_t new_marked) {
-    return __sync_bool_compare_and_swap(&node->marked, (uintptr_t)expected_next & expected_marked, (uintptr_t)new_next & new_marked);
+    uintptr_t expected, new;
+
+    expected = expected_marked ? (uintptr_t)expected_next | 1 : (uintptr_t)expected_next & ~1;
+    new = new_marked ? (uintptr_t)new_next | 1 : (uintptr_t)new_next & ~1;
+    return __sync_bool_compare_and_swap(&node->marked, expected, new);
 }
 
 /**
@@ -98,7 +101,7 @@ retry:
             next = get_next(&temp);
             marked = get_marked(&temp);
             while (marked) {
-                if (!compare_and_set(prev, curr, next, ~1, ~1))
+                if (!compare_and_set(prev, curr, next, 0, 0))
                     goto retry;
                 curr = next;
                 temp = *curr;
@@ -136,7 +139,7 @@ int ll_add(ll_t *ll, int key) {
         node = ll_node_new(key);
         node->next = curr;
         node->marked &= ~1;
-        if (compare_and_set(prev, curr, node, ~1, ~1))
+        if (compare_and_set(prev, curr, node, 0, 0))
             return 1;
     }
 }
@@ -153,8 +156,8 @@ int ll_remove(ll_t *ll, int key) {
         if (curr->key != key)
             return 0;
         next = get_next(curr);
-        if (compare_and_set(curr, next, next, ~1, ~0)) {
-            compare_and_set(prev, curr, next, ~1, ~1);
+        if (compare_and_set(curr, next, next, 0, 1)) {
+            compare_and_set(prev, curr, next, 0, 0);
             return 1;
         }
     }
