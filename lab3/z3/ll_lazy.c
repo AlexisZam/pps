@@ -73,73 +73,80 @@ int validate(ll_t *ll, ll_node_t *curr, ll_node_t *next) {
 
 int ll_contains(ll_t *ll, int key) {
     ll_node_t *curr = ll->head;
-    int ret = 0;
 
     while (curr->key < key)
         curr = curr->next;
 
-    ret = key == curr->key && !curr->marked;
-    return ret;
+    return key == curr->key && !curr->marked;
 }
 
 int ll_add(ll_t *ll, int key) {
-    int ret = 0;
-    ll_node_t *curr, *next;
-    ll_node_t *new_node;
+    int ret;
+    ll_node_t *curr, *next, *new_node;
     int validated;
 
-    curr = ll->head;
-    next = curr->next;
-
-    while (next->key < key) {
-        curr = next;
+    for (;;) {
+        curr = ll->head;
         next = curr->next;
-    }
 
-    pthread_spin_lock(&curr->lock);
-    pthread_spin_lock(&next->lock);
-    if ((validated = validate(ll, curr, next))) {
-        if (key != next->key) {
-            ret = 1;
-            new_node = ll_node_new(key);
-            new_node->next = next;
-            curr->next = new_node;
-        } else
-            ret = 0;
-    }
-    pthread_spin_unlock(&curr->lock);
-    pthread_spin_unlock(&next->lock);
+        while (next->key < key) {
+            curr = next;
+            next = curr->next;
+        }
 
-    return ret;
+        pthread_spin_lock(&curr->lock);
+        pthread_spin_lock(&next->lock);
+        if ((validated = validate(ll, curr, next))) {
+            if (key == next->key)
+                ret = 0;
+            else {
+                new_node = ll_node_new(key);
+                new_node->next = next;
+                curr->next = new_node;
+                ret = 1;
+            }
+        }
+        pthread_spin_unlock(&next->lock);
+        pthread_spin_unlock(&curr->lock);
+
+        if (validated)
+            return ret;
+    }
 }
 
 int ll_remove(ll_t *ll, int key) {
-    int ret = 0;
+    int ret;
     ll_node_t *curr, *next;
     int validated;
 
-    curr = ll->head;
-    next = curr->next;
-
-    while (next->key < key) {
-        curr = next;
+    for (;;) {
+        curr = ll->head;
         next = curr->next;
-    }
 
-    pthread_spin_lock(&curr->lock);
-    pthread_spin_lock(&next->lock);
-    if ((validated = validate(ll, curr, next))) {
-        if (key == next->key) {
-            ret = 1;
-            curr->marked = 1;
-            curr->next = next->next;
-        } else
-            ret = 0;
-    }
-    pthread_spin_unlock(&curr->lock);
-    pthread_spin_unlock(&next->lock);
+        while (next->key <= key) {
+            if (key == next->key)
+                return 0;
+            curr = next;
+            next = curr->next;
+        }
 
-    return ret;
+        pthread_spin_lock(&curr->lock);
+        pthread_spin_lock(&next->lock);
+        if ((validated = validate(ll, curr, next))) {
+            if (key != next->key)
+                ret = 0;
+            else {
+                curr->marked = 1;
+                curr->next = next->next;
+                ret = 1;
+            }
+        }
+        pthread_spin_unlock(&next->lock);
+        pthread_spin_unlock(&curr->lock);
+
+        if (validated)
+            return ret;
+    }
 }
 
 /**
@@ -175,4 +182,27 @@ int ll_is_sorted(ll_t *ll) {
     }
 
     return 1;
+}
+
+unsigned long long ll_length(ll_t *ll) {
+    int length = 0;
+
+    for (ll_node_t *curr = ll->head; curr; curr = curr->next)
+        if (!curr->marked)
+            length++;
+
+    return length - 2;
+}
+
+unsigned long long ll_key_sum(ll_t *ll) {
+    unsigned long long key_sum = 0;
+    ll_node_t *curr = ll->head;
+
+    while (curr->key != INT_MAX) {
+        if (!curr->marked)
+            key_sum += curr->key;
+        curr = curr->next;
+    }
+
+    return key_sum + 1;
 }

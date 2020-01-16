@@ -33,15 +33,8 @@ static inline int get_marked(ll_node_t *node) {
     return node->marked & 1;
 }
 
-static inline int compare_and_set(ll_node_t *node, ll_node_t *expected_reference, ll_node_t *new_reference, int expected_mark, int new_mark) {
-    ll_node_t expected_node, new_node;
-
-    expected_node.next = expected_reference;
-    expected_node.marked &= expected_mark;
-    new_node.next = new_reference;
-    new_node.marked &= new_mark;
-
-    return __sync_bool_compare_and_swap(&node->marked, expected_node.marked, new_node.marked);
+static inline int compare_and_set(ll_node_t *node, ll_node_t *expected_next, ll_node_t *new_next, uintptr_t expected_marked, uintptr_t new_marked) {
+    return __sync_bool_compare_and_swap(&node->marked, (uintptr_t)expected_next & expected_marked, (uintptr_t)new_next & new_marked);
 }
 
 /**
@@ -95,19 +88,22 @@ window_t find(ll_node_t *head, int key) {
 retry:
     for (;;) {
         ll_node_t *prev, *curr, *next;
+        ll_node_t temp;
         int marked;
 
         prev = head;
         curr = get_next(prev);
         for (;;) {
-            next = get_next(curr);
-            marked = get_marked(curr);
+            temp = *curr;
+            next = get_next(&temp);
+            marked = get_marked(&temp);
             while (marked) {
                 if (!compare_and_set(prev, curr, next, ~1, ~1))
                     goto retry;
                 curr = next;
-                next = get_next(curr);
-                marked = get_marked(curr);
+                temp = *curr;
+                next = get_next(&temp);
+                marked = get_marked(&temp);
             }
             if (curr->key >= key)
                 return (window_t){prev, curr};
@@ -197,4 +193,27 @@ int ll_is_sorted(ll_t *ll) {
     }
 
     return 1;
+}
+
+unsigned long long ll_length(ll_t *ll) {
+    int length = 0;
+
+    for (ll_node_t *curr = ll->head; curr; curr = get_next(curr))
+        if (!get_marked(curr))
+            length++;
+
+    return length - 2;
+}
+
+unsigned long long ll_key_sum(ll_t *ll) {
+    unsigned long long key_sum = 0;
+    ll_node_t *curr = ll->head;
+
+    while (curr->key != INT_MAX) {
+        if (!get_marked(curr))
+            key_sum += curr->key;
+        curr = get_next(curr);
+    }
+
+    return key_sum + 1;
 }

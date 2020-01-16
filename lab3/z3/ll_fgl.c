@@ -170,3 +170,24 @@ int ll_is_sorted(ll_t *ll) {
 
     return 1;
 }
+
+unsigned long long ll_length(ll_t *ll) {
+    int length = 0;
+
+    for (ll_node_t *curr = ll->head; curr; curr = curr->next)
+        length++;
+
+    return length - 2;
+}
+
+unsigned long long ll_key_sum(ll_t *ll) {
+    unsigned long long key_sum = 0;
+    ll_node_t *curr = ll->head;
+
+    while (curr->key != INT_MAX) {
+        key_sum += curr->key;
+        curr = curr->next;
+    }
+
+    return key_sum + 1;
+}
