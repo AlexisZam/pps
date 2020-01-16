@@ -7,7 +7,7 @@
 #PBS -l walltime=00:10:00
 
 cd /home/parallel/parlab02/pps/lab3/z3
-for ll in ll_serial ll_fgl ll_opt ll_lazy ll_nb
+for ll in ll_fgl ll_opt ll_lazy ll_nb
 do
     echo LL: $ll
     for nthreads in 1 2 4 8 16 32 64
