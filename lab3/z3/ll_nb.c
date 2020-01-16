@@ -1,5 +1,4 @@
 #include <limits.h>
-#include <pthread.h> /* for pthread_spinlock_t */
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h> /* rand() */
@@ -14,13 +13,30 @@ typedef struct ll_node {
 
 struct linked_list {
     ll_node_t *head;
-    /* other fields here? */
 };
 
 typedef struct window {
+    ll_node_t *prev;
     ll_node_t *curr;
-    ll_node_t *next;
 } window_t;
+
+static inline ll_node_t *get_next(ll_node_t *node, int *marked) {
+    ll_node_t *temp = node->next;
+    *marked = (uintptr_t)temp & 1;
+    return (ll_node_t *)((uintptr_t)temp >> 1);
+}
+
+static inline ll_node_t *get_next_next(ll_node_t *node) {
+    return (ll_node_t *)((uintptr_t)node->next >> 1);
+}
+
+static inline void set_next(ll_node_t *node, ll_node_t *next) {
+    node->next = (ll_node_t *)((uintptr_t)next << 1);
+}
+
+static inline int get_next_marked(ll_node_t *node) {
+    return (uintptr_t)node->next & 1;
+}
 
 /**
  * Create a new linked list node.
@@ -31,7 +47,7 @@ static ll_node_t *ll_node_new(int key) {
     XMALLOC(ret, 1);
     ret->key = key;
     ret->next = NULL;
-    ret->next = (uintptr_t)ret->next << 1 | 0;
+    set_next(ret, ret->next);
 
     return ret;
 }
@@ -74,25 +90,19 @@ window_t find(ll_node_t *head, int key) {
 retry:
     for (;;) {
         ll_node_t *prev, *curr, *next;
-        int snip;
         int marked;
 
         prev = head;
-        curr = (uintptr_t)prev->next >> 1;
+        curr = get_next_next(prev);
         for (;;) {
-            next = curr->next;
-            marked = (uintptr_t)next & 1;
-            next = (uintptr_t)next >> 1;
+            printf("%p\n", (uintptr_t)curr >> 1);
+            printf("%p\n", curr);
+            next = get_next(curr, &marked);
             while (marked) {
-                snip = prev->next == curr;
-                if (snip)
-                    prev->next = next;
-                if (!snip)
+                if (!__sync_bool_compare_and_swap(&prev->next, (uintptr_t)curr << 1, (uintptr_t)next << 1))
                     goto retry;
                 curr = next;
-                next = curr->next;
-                marked = (uintptr_t)next & 1;
-                next = (uintptr_t)next >> 1;
+                next = get_next(curr, &marked);
             }
             if (curr->key >= key)
                 return (window_t){prev, curr};
@@ -104,57 +114,50 @@ retry:
 
 int ll_contains(ll_t *ll, int key) {
     ll_node_t *curr = ll->head;
-    int ret = 0;
+    int marked;
 
-    while (curr->key < key)
+    while (curr->key < key) {
         curr = curr->next;
-
-    ret = (key == curr->key);
-    return ret;
+        marked = get_next_marked(curr);
+    }
+    return key == curr->key && !marked;
 }
 
 int ll_add(ll_t *ll, int key) {
-    int ret = 0;
-    ll_node_t *curr, *next;
-    ll_node_t *new_node;
+    ll_node_t *prev, *curr, *node;
+    window_t window;
 
-    curr = ll->head;
-    next = curr->next;
+    for (;;) {
+        window = find(ll->head, key);
+        prev = window.prev;
+        curr = window.curr;
 
-    while (next->key < key) {
-        curr = next;
-        next = curr->next;
+        if (curr->key != key)
+            return 0;
+        node = ll_node_new(key);
+        set_next(node, curr);
+        if (__sync_bool_compare_and_swap(&prev->next, (uintptr_t)curr << 1, node))
+            return 1;
     }
-
-    if (key != next->key) {
-        ret = 1;
-        new_node = ll_node_new(key);
-        new_node->next = next;
-        curr->next = new_node;
-    }
-
-    return ret;
 }
 
 int ll_remove(ll_t *ll, int key) {
-    int ret = 0;
-    ll_node_t *curr, *next;
+    ll_node_t *prev, *curr, *next;
+    window_t window;
 
-    curr = ll->head;
-    next = curr->next;
+    for (;;) {
+        window = find(ll->head, key);
+        prev = window.prev;
+        curr = window.curr;
 
-    while (next->key < key) {
-        curr = next;
-        next = curr->next;
+        if (curr->key != key)
+            return 0;
+        next = get_next_next(curr);
+        if (__sync_bool_compare_and_swap(&curr->next, ((uintptr_t)next << 1) | get_next_marked(curr), ((uintptr_t)curr->next << 1) | 1)) {
+            __sync_bool_compare_and_swap(&prev->next, (uintptr_t)curr << 1, (uintptr_t)next << 1);
+            return 1;
+        }
     }
-
-    if (key == next->key) {
-        ret = 1;
-        curr->next = next->next;
-        ll_node_free(next);
-    }
-
-    return ret;
 }
 
 /**
