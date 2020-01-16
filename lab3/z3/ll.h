@@ -25,4 +25,6 @@ int ll_remove(ll_t *ll, int key);
  **/
 void ll_print(ll_t *ll);
 
+int ll_is_sorted(ll_t *ll);
+
 #endif /* LL_H */

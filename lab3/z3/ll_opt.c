@@ -160,3 +160,19 @@ void ll_print(ll_t *ll) {
     }
     printf(" ]\n");
 }
+
+int ll_is_sorted(ll_t *ll) {
+    ll_node_t *curr, *next;
+
+    curr = ll->head;
+    next = curr->next;
+
+    while (next->key != INT_MAX) {
+        if (curr->key >= next->key)
+            return 0;
+        curr = next;
+        next = curr->next;
+    }
+
+    return 1;
+}
