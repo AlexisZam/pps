@@ -53,7 +53,6 @@ static ll_node_t *ll_node_new(int key) {
     XMALLOC(ret, 1);
     ret->key = key;
     ret->next = NULL;
-    // ret->marked &= ~1;
 
     return ret;
 }
@@ -104,7 +103,7 @@ retry:
             next = get_next(curr);
             marked = get_marked(curr);
             while (marked) {
-                if (!compare_and_set(prev->next, curr, next, ~1, ~1))
+                if (!compare_and_set(prev, curr, next, ~1, ~1))
                     goto retry;
                 curr = next;
                 next = get_next(curr);
@@ -120,13 +119,11 @@ retry:
 
 int ll_contains(ll_t *ll, int key) {
     ll_node_t *curr = ll->head;
-    int marked;
 
-    while (curr->key < key) {
-        curr = curr->next;
-        marked = get_marked(curr);
-    }
-    return key == curr->key && !marked;
+    while (curr->key < key)
+        curr = get_next(curr);
+
+    return key == curr->key && !get_marked(curr);
 }
 
 int ll_add(ll_t *ll, int key) {
@@ -138,12 +135,12 @@ int ll_add(ll_t *ll, int key) {
         prev = window.prev;
         curr = window.curr;
 
-        if (curr->key != key)
+        if (curr->key == key)
             return 0;
         node = ll_node_new(key);
         node->next = curr;
-        node->marked &= 0;
-        if (compare_and_set(prev->next, curr, node, ~1, ~1))
+        node->marked &= ~1;
+        if (compare_and_set(prev, curr, node, ~1, ~1))
             return 1;
     }
 }
@@ -160,8 +157,8 @@ int ll_remove(ll_t *ll, int key) {
         if (curr->key != key)
             return 0;
         next = get_next(curr);
-        if (compare_and_set(curr->next, next, next, get_marked(curr->next), 1)) {
-            compare_and_set(prev->next, curr, next, ~1, ~1);
+        if (compare_and_set(curr, next, next, ~1, ~0)) {
+            compare_and_set(prev, curr, next, ~1, ~1);
             return 1;
         }
     }
@@ -174,11 +171,13 @@ void ll_print(ll_t *ll) {
     ll_node_t *curr = ll->head;
     printf("LIST [");
     while (curr) {
-        if (curr->key == INT_MAX)
-            printf(" -> MAX");
-        else
-            printf(" -> %d", curr->key);
-        curr = curr->next;
+        if (!get_marked(curr)) {
+            if (curr->key == INT_MAX)
+                printf(" -> MAX");
+            else
+                printf(" -> %d", curr->key);
+            curr = get_next(curr);
+        }
     }
     printf(" ]\n");
 }

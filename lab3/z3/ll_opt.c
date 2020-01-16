@@ -73,23 +73,18 @@ int validate(ll_t *ll, ll_node_t *curr, ll_node_t *next) {
 }
 
 int ll_contains(ll_t *ll, int key) {
-    for (;;) {
-        ll_node_t *curr = ll->head;
-        int ret = 0;
+    ll_node_t *curr = ll->head;
 
-        while (curr->key < key)
-            curr = curr->next;
+    while (curr->key < key)
+        curr = curr->next;
 
-        ret = (key == curr->key);
-        return ret;
-    }
+    return key == curr->key;
 }
 
 int ll_add(ll_t *ll, int key) {
     for (;;) {
-        int ret = 0;
-        ll_node_t *curr, *next;
-        ll_node_t *new_node;
+        int ret;
+        ll_node_t *curr, *next, *new_node;
         int validated;
 
         curr = ll->head;
@@ -121,7 +116,7 @@ int ll_add(ll_t *ll, int key) {
 
 int ll_remove(ll_t *ll, int key) {
     for (;;) {
-        int ret = 0;
+        int ret;
         ll_node_t *curr, *next;
         int validated;
 
@@ -139,7 +134,6 @@ int ll_remove(ll_t *ll, int key) {
             if (key == next->key) {
                 ret = 1;
                 curr->next = next->next;
-                ll_node_free(next);
             } else
                 ret = 0;
         }

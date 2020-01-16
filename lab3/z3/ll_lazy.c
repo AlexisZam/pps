@@ -133,7 +133,6 @@ int ll_remove(ll_t *ll, int key) {
             ret = 1;
             curr->marked = 1;
             curr->next = next->next;
-            ll_node_free(next);
         } else
             ret = 0;
     }
@@ -150,10 +149,12 @@ void ll_print(ll_t *ll) {
     ll_node_t *curr = ll->head;
     printf("LIST [");
     while (curr) {
-        if (curr->key == INT_MAX)
-            printf(" -> MAX");
-        else
-            printf(" -> %d", curr->key);
+        if (!curr->marked) {
+            if (curr->key == INT_MAX)
+                printf(" -> MAX");
+            else
+                printf(" -> %d", curr->key);
+        }
         curr = curr->next;
     }
     printf(" ]\n");
