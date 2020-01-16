@@ -29,28 +29,19 @@ static inline ll_node_t *get_next(ll_node_t *node) {
     return temp.next;
 }
 
-static inline ll_node_t *get(ll_node_t *node, int *marked) {
-    *marked = node->marked & 1;
-    return get_next(node);
+static inline int get_marked(ll_node_t *node) {
+    return node->marked & 1;
 }
 
 static inline int compare_and_set(ll_node_t *node, ll_node_t *expected_reference, ll_node_t *new_reference, int expected_mark, int new_mark) {
     ll_node_t expected_node, new_node;
 
     expected_node.next = expected_reference;
-    if (!expected_mark)
-        expected_node.marked &= ~1;
+    expected_node.marked &= expected_mark;
     new_node.next = new_reference;
-    if (!new_mark)
-        new_node.marked &= ~1;
+    new_node.marked &= new_mark;
 
     return __sync_bool_compare_and_swap(&node->marked, expected_node.marked, new_node.marked);
-}
-
-static inline int attempt_mark(ll_node_t *node, ll_node_t *expected_reference, int new_mark) {
-    int marked;
-    get(node, &marked);
-    return compare_and_set(node, expected_reference, expected_reference, marked, new_mark);
 }
 
 /**
@@ -101,8 +92,6 @@ void ll_free(ll_t *ll) {
     XFREE(ll);
 }
 
-#define print printf
-
 window_t find(ll_node_t *head, int key) {
 retry:
     for (;;) {
@@ -112,12 +101,14 @@ retry:
         prev = head;
         curr = get_next(prev);
         for (;;) {
-            next = get(curr, &marked);
+            next = get_next(curr);
+            marked = get_marked(curr);
             while (marked) {
-                if (!compare_and_set(prev->next, curr, next, 0, 0))
+                if (!compare_and_set(prev->next, curr, next, ~1, ~1))
                     goto retry;
                 curr = next;
-                next = get(curr, &marked);
+                next = get_next(curr);
+                marked = get_marked(curr);
             }
             if (curr->key >= key)
                 return (window_t){prev, curr};
@@ -133,7 +124,7 @@ int ll_contains(ll_t *ll, int key) {
 
     while (curr->key < key) {
         curr = curr->next;
-        get(curr, &marked);
+        marked = get_marked(curr);
     }
     return key == curr->key && !marked;
 }
@@ -152,7 +143,7 @@ int ll_add(ll_t *ll, int key) {
         node = ll_node_new(key);
         node->next = curr;
         node->marked &= 0;
-        if (compare_and_set(prev->next, curr, node, 0, 0))
+        if (compare_and_set(prev->next, curr, node, ~1, ~1))
             return 1;
     }
 }
@@ -169,8 +160,8 @@ int ll_remove(ll_t *ll, int key) {
         if (curr->key != key)
             return 0;
         next = get_next(curr);
-        if (attempt_mark(curr->next, next, 1)) {
-            compare_and_set(prev->next, curr, next, 0, 0);
+        if (compare_and_set(curr->next, next, next, get_marked(curr->next), 1)) {
+            compare_and_set(prev->next, curr, next, ~1, ~1);
             return 1;
         }
     }
