@@ -4,13 +4,40 @@ LOCK_FILE ?= nosync_lock.c
 
 .PHONY = all clean
 
-all: linked_list test
+all: nosync_lock pthread_lock tas_lock ttas_lock array_lock clh_lock test_pthread_lock test_tas_lock test_ttas_lock test_array_lock test_clh_lock
 
-linked_list: main.c $(LOCK_FILE) ../common/aff.c
+nosync_lock: main.c nosync_lock.c ../common/aff.c
 	$(CC) $(CFLAGS) $^ -o $@
 
-test: test.c $(LOCK_FILE) ../common/aff.c
+pthread_lock: main.c pthread_lock.c ../common/aff.c
+	$(CC) $(CFLAGS) $^ -o $@
+
+tas_lock: main.c tas_lock.c ../common/aff.c
+	$(CC) $(CFLAGS) $^ -o $@
+
+ttas_lock: main.c ttas_lock.c ../common/aff.c
+	$(CC) $(CFLAGS) $^ -o $@
+
+array_lock: main.c array_lock.c ../common/aff.c
+	$(CC) $(CFLAGS) $^ -o $@
+
+clh_lock: main.c clh_lock.c ../common/aff.c
+	$(CC) $(CFLAGS) $^ -o $@
+
+test_pthread_lock: test.c pthread_lock.c ../common/aff.c
+	$(CC) $(CFLAGS) $^ -o $@
+
+test_tas_lock: test.c tas_lock.c ../common/aff.c
+	$(CC) $(CFLAGS) $^ -o $@
+
+test_ttas_lock: test.c ttas_lock.c ../common/aff.c
+	$(CC) $(CFLAGS) $^ -o $@
+
+test_array_lock: test.c array_lock.c ../common/aff.c
+	$(CC) $(CFLAGS) $^ -o $@
+
+test_clh_lock: test.c clh_lock.c ../common/aff.c
 	$(CC) $(CFLAGS) $^ -o $@
 
 clean:
-	$(RM) linked_list test
+	$(RM) nosync_lock pthread_lock tas_lock ttas_lock array_lock clh_lock test_pthread_lock test_tas_lock test_ttas_lock test_array_lock test_clh_lock

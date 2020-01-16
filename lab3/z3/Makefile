@@ -1,13 +1,24 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -Wno-unused-function -Wno-unused-parameter -pthread
-LL_FILE ?= ll_serial.c
 
 .PHONY = all clean
 
-all: linked_list
+all: ll_serial ll_fgl ll_opt ll_lazy ll_nb
 
-linked_list: main.c $(LL_FILE) ../common/aff.c
+ll_serial: main.c ll_serial.c ../common/aff.c
+	$(CC) $(CFLAGS) $^ -o $@
+
+ll_fgl: main.c ll_fgl.c ../common/aff.c
+	$(CC) $(CFLAGS) $^ -o $@
+
+ll_opt: main.c ll_opt.c ../common/aff.c
+	$(CC) $(CFLAGS) $^ -o $@
+
+ll_lazy: main.c ll_lazy.c ../common/aff.c
+	$(CC) $(CFLAGS) $^ -o $@
+
+ll_nb: main.c ll_nb.c ../common/aff.c
 	$(CC) $(CFLAGS) $^ -o $@
 
 clean:
-	$(RM) linked_list
+	$(RM) ll_serial ll_fgl ll_opt ll_lazy ll_nb
