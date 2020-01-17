@@ -1,8 +1,7 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -Wno-unused-function -Wno-unused-parameter -pthread
-LOCK_FILE ?= nosync_lock.c
+CFLAGS = -Wall -Wextra -pthread
 
-.PHONY = all clean
+.PHONY: all clean
 
 all: nosync_lock pthread_lock tas_lock ttas_lock array_lock clh_lock test_pthread_lock test_tas_lock test_ttas_lock test_array_lock test_clh_lock
 

@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -pthread
 
-.PHONY = all clean
+.PHONY: all clean
 
 all: accounts
 

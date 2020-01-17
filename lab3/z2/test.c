@@ -56,8 +56,7 @@ int main(int argc, char **argv) {
     //> Print results.
     unsigned long long expected = nthreads * INCS_PER_THREAD;
     unsigned long long result = counter;
-    int correct = (result == expected);
-    if (correct)
+    if (result == expected)
         printf("%d threads: CORRECT\n", nthreads);
     else
         printf("%d threads: ERROR (expected = %llu, result = %llu)\n",

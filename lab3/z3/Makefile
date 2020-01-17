@@ -1,7 +1,7 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -Wno-unused-function -Wno-unused-parameter -pthread
+CFLAGS = -Wall -Wextra -pthread
 
-.PHONY = all clean
+.PHONY: all clean
 
 all: ll_serial ll_fgl ll_opt ll_lazy ll_nb
 
