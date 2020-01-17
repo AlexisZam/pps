@@ -25,10 +25,12 @@ void lock_free(lock_t *lock) {
 void lock_acquire(lock_t *lock) {
     lock_t *l = lock;
 
-    do {
+    for (;;) {
         while (l->state == LOCKED)
             /* do nothing */;
-    } while (__sync_lock_test_and_set(&l->state, LOCKED) == LOCKED);
+        if (__sync_lock_test_and_set(&l->state, LOCKED) == UNLOCKED)
+            return;
+    }
 }
 
 void lock_release(lock_t *lock) {
