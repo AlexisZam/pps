@@ -65,18 +65,6 @@ void ll_free(ll_t *ll) {
 }
 
 int ll_contains(ll_t *ll, int key) {
-    ll_node_t *node = ll->head;
-
-    while (node->key <= curr->key) {
-        if (node == curr)
-            return next == curr->next;
-        node = node->next;
-    }
-
-    return 0;
-}
-
-int ll_add(ll_t *ll, int key) {
     int ret = 0;
     ll_node_t *curr, *next;
     ll_node_t *new_node;

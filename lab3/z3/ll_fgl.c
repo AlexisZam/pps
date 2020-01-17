@@ -65,18 +65,26 @@ void ll_free(ll_t *ll) {
 }
 
 int ll_contains(ll_t *ll, int key) {
-    ll_node_t *curr = ll->head;
     int ret = 0;
+    ll_node_t *curr, *next;
 
-    pthread_spin_lock(&curr->lock);
-    while (curr->key < key) {
+    pthread_spin_lock(&ll->head->lock);
+    curr = ll->head;
+    next = curr->next;
+    pthread_spin_lock(&next->lock);
+
+    while (next->key < key) {
         pthread_spin_unlock(&curr->lock);
-        curr = curr->next;
-        pthread_spin_lock(&curr->lock);
+        curr = next;
+        next = curr->next;
+        pthread_spin_lock(&next->lock);
     }
 
-    ret = (key == curr->key);
+    if (key == next->key)
+        ret = 1;
+    pthread_spin_unlock(&next->lock);
     pthread_spin_unlock(&curr->lock);
+
     return ret;
 }
 
