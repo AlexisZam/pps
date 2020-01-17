@@ -65,14 +65,44 @@ void ll_free(ll_t *ll) {
 }
 
 int ll_contains(ll_t *ll, int key) {
-    ll_node_t *curr = ll->head;
+    ll_node_t *node = ll->head;
+
+    while (node->key <= curr->key) {
+        if (node == curr)
+            return next == curr->next;
+        node = node->next;
+    }
+
+    return 0;
+}
+
+int ll_add(ll_t *ll, int key) {
     int ret = 0;
+    ll_node_t *curr, *next;
+    ll_node_t *new_node;
+    int validated;
 
-    while (curr->key < key)
-        curr = curr->next;
+    for (;;) {
+        curr = ll->head;
+        next = curr->next;
 
-    ret = (key == curr->key);
-    return ret;
+        while (next->key < key) {
+            curr = next;
+            next = curr->next;
+        }
+
+        pthread_spin_lock(&curr->lock);
+        pthread_spin_lock(&next->lock);
+        if ((validated = validate(ll, curr, next))) {
+            if (key == next->key)
+                ret = 1;
+        }
+        pthread_spin_unlock(&curr->lock);
+        pthread_spin_unlock(&next->lock);
+
+        if (validated)
+            return ret;
+    }
 }
 
 int validate(ll_t *ll, ll_node_t *curr, ll_node_t *next) {
