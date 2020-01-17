@@ -67,7 +67,6 @@ void ll_free(ll_t *ll) {
 int ll_contains(ll_t *ll, int key) {
     int ret = 0;
     ll_node_t *curr, *next;
-    ll_node_t *new_node;
     int validated;
 
     for (;;) {
@@ -81,10 +80,9 @@ int ll_contains(ll_t *ll, int key) {
 
         pthread_spin_lock(&curr->lock);
         pthread_spin_lock(&next->lock);
-        if ((validated = validate(ll, curr, next))) {
+        if ((validated = validate(ll, curr, next)))
             if (key == next->key)
                 ret = 1;
-        }
         pthread_spin_unlock(&curr->lock);
         pthread_spin_unlock(&next->lock);
 
