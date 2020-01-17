@@ -95,6 +95,7 @@ int main(int argc, char **argv) {
         total_net_adds += threads_data[i].net_adds;
         total_sum_of_keys += threads_data[i].sum_of_keys;
     }
+
     //> Print results.
     if (ll_is_sorted(ll))
         printf("Is sorted: CORRECT\n");
