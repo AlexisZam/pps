@@ -31,16 +31,14 @@ short contains_pct, add_pct, remove_pct;
 typedef struct {
     int tid,
         cpu;
-    unsigned long long ops,
-        net_gain,
-        net_key_gain;
-    char padding[64 - 2 * sizeof(int) - 3 * sizeof(unsigned long long)];
+    unsigned long long net_adds,
+        sum_of_keys;
+    char padding[64 - 2 * sizeof(int) - 2 * sizeof(unsigned long long)];
 } tdata_t;
 
 void *thread_fn(void *targ);
 
 int main(int argc, char **argv) {
-    timer_tt *wall_timer;
     pthread_t threads[MAX_THREADS];
     tdata_t threads_data[MAX_THREADS];
     unsigned int nthreads = 0, *cpus;
@@ -63,7 +61,6 @@ int main(int argc, char **argv) {
 
     if (pthread_barrier_init(&start_barrier, NULL, nthreads + 1))
         print_error_and_exit("Failed to initialize start_barrier.\n");
-    wall_timer = timer_init();
 
     //> Initialize the linked list.
     ll = ll_new();
@@ -74,16 +71,14 @@ int main(int argc, char **argv) {
     for (i = 0; i < nthreads; i++) {
         threads_data[i].tid = i;
         threads_data[i].cpu = cpus[i];
-        threads_data[i].ops = 0;
-        threads_data[i].net_gain = 0;
-        threads_data[i].net_key_gain = 0;
+        threads_data[i].net_adds = 0;
+        threads_data[i].sum_of_keys = 0;
         if (pthread_create(&threads[i], NULL, thread_fn, &threads_data[i]))
             print_error_and_exit("Error creating thread %d.\n", i);
     }
 
     //> Signal threads to start computation.
     pthread_barrier_wait(&start_barrier);
-    timer_start(wall_timer);
 
     sleep(RUNTIME);
     time_to_leave = 1;
@@ -94,30 +89,33 @@ int main(int argc, char **argv) {
             print_error_and_exit("Failure on pthread_join for thread %d.\n", i);
     }
 
-    timer_stop(wall_timer);
-
     //> How many operations have been performed by all threads?
-    unsigned long long total_ops = 0, total_net_gain = 0, total_net_key_gain = 0;
+    unsigned long long total_net_adds = 0, total_sum_of_keys = 0;
     for (i = 0; i < nthreads; i++) {
-        total_ops += threads_data[i].ops;
-        total_net_gain += threads_data[i].net_gain;
-        total_net_key_gain += threads_data[i].net_key_gain;
+        total_net_adds += threads_data[i].net_adds;
+        total_sum_of_keys += threads_data[i].sum_of_keys;
     }
     //> Print results.
-    double secs = timer_report_sec(wall_timer);
-    double throughout = (double)total_ops / secs / 1000.0;
-    printf("Nthreads: %d  Runtime(sec): %d  Workload: %d/%d/%d  Throughput(Kops/sec): %5.2lf\n",
-           nthreads, RUNTIME, contains_pct, add_pct, remove_pct, throughout);
+    if (ll_is_sorted(ll))
+        printf("Is sorted: CORRECT\n");
+    else
+        printf("Is sorted: ERROR\n");
 
-    ll_print(ll);
-    printf(ll_is_sorted(ll) ? "Passed\n" : "Failed\n");
-    unsigned long long real_length = ll_length(ll), expected_length = list_size / 2 + total_net_gain;
-    printf(real_length == expected_length ? "Passed\n" : "Failed\n");
-    printf("Real length: %lld\nExpected length: %lld\n", real_length, expected_length);
-    unsigned long long real_key_sum = ll_key_sum(ll), expected_key_sum = (list_size / 2) * (list_size / 2 + 1) / 2 + total_net_key_gain;
-    printf(real_key_sum == expected_key_sum ? "Passed\n" : "Failed\n");
-    printf("Real key sum: %lld\nExpected key sum: %lld\n", real_key_sum, expected_key_sum);
+    unsigned long long expected = list_size / 2 + total_net_adds;
+    unsigned long long result = ll_length(ll);
+    if (result == expected)
+        printf("Length: CORRECT\n");
+    else
+        printf("Length: ERROR (expected = %llu, result = %llu)\n", expected, result);
 
+    expected = (list_size / 2) * (list_size / 2 + 1) / 2 + total_sum_of_keys;
+    result = ll_sum_of_keys(ll);
+    if (result == expected)
+        printf("Sum of keys: CORRECT\n");
+    else
+        printf("Sum of keys: ERROR (expected = %llu, result = %llu)\n", expected, result);
+
+    // ll_print(ll);
     ll_free(ll);
     return EXIT_SUCCESS;
 }
@@ -153,17 +151,14 @@ void *thread_fn(void *targ) {
             ll_contains(ll, key);
         else if (op < contains_pct + add_pct) {
             if (ll_add(ll, key)) {
-                mydata->net_gain++;
-                mydata->net_key_gain += key;
+                mydata->net_adds++;
+                mydata->sum_of_keys += key;
             }
-        } else {
-            if (ll_remove(ll, key)) {
-                mydata->net_gain--;
-                mydata->net_key_gain -= key;
-            }
+        } else if (ll_remove(ll, key)) {
+            mydata->net_adds--;
+            mydata->sum_of_keys -= key;
         }
 
-        mydata->ops++;
         for (i = 0; i < 200; i++)
             /* do nothing */;
     }

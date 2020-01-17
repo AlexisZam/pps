@@ -103,7 +103,6 @@ int ll_add(ll_t *ll, int key) {
         new_node->next = next;
         curr->next = new_node;
     }
-
     pthread_spin_unlock(&next->lock);
     pthread_spin_unlock(&curr->lock);
 
@@ -131,7 +130,6 @@ int ll_remove(ll_t *ll, int key) {
         curr->next = next->next;
         ll_node_free(next);
     }
-
     pthread_spin_unlock(&next->lock);
     pthread_spin_unlock(&curr->lock);
 
@@ -160,7 +158,7 @@ int ll_is_sorted(ll_t *ll) {
     curr = ll->head;
     next = curr->next;
 
-    while (next->key != INT_MAX) {
+    while (curr->key != INT_MAX) {
         if (curr->key >= next->key)
             return 0;
         curr = next;
@@ -171,22 +169,29 @@ int ll_is_sorted(ll_t *ll) {
 }
 
 unsigned long long ll_length(ll_t *ll) {
-    int length = 0;
-
-    for (ll_node_t *curr = ll->head; curr; curr = curr->next)
-        length++;
-
-    return length - 2;
-}
-
-unsigned long long ll_key_sum(ll_t *ll) {
-    unsigned long long key_sum = 0;
     ll_node_t *curr = ll->head;
+    int ret = 0;
+
+    curr = curr->next;
 
     while (curr->key != INT_MAX) {
-        key_sum += curr->key;
+        ret++;
         curr = curr->next;
     }
 
-    return key_sum + 1;
+    return ret;
+}
+
+unsigned long long ll_sum_of_keys(ll_t *ll) {
+    ll_node_t *curr = ll->head;
+    int ret = 0;
+
+    curr = curr->next;
+
+    while (curr->key != INT_MAX) {
+        ret += curr->key;
+        curr = curr->next;
+    }
+
+    return ret;
 }

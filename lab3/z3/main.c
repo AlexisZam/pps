@@ -31,10 +31,8 @@ short contains_pct, add_pct, remove_pct;
 typedef struct {
     int tid,
         cpu;
-    unsigned long long ops,
-        net_gain,
-        net_key_gain;
-    char padding[64 - 2 * sizeof(int) - 3 * sizeof(unsigned long long)];
+    unsigned long long ops;
+    char padding[64 - 2 * sizeof(int) - sizeof(unsigned long long)];
 } tdata_t;
 
 void *thread_fn(void *targ);
@@ -75,8 +73,6 @@ int main(int argc, char **argv) {
         threads_data[i].tid = i;
         threads_data[i].cpu = cpus[i];
         threads_data[i].ops = 0;
-        threads_data[i].net_gain = 0;
-        threads_data[i].net_key_gain = 0;
         if (pthread_create(&threads[i], NULL, thread_fn, &threads_data[i]))
             print_error_and_exit("Error creating thread %d.\n", i);
     }
@@ -97,27 +93,17 @@ int main(int argc, char **argv) {
     timer_stop(wall_timer);
 
     //> How many operations have been performed by all threads?
-    unsigned long long total_ops = 0, total_net_gain = 0, total_net_key_gain = 0;
-    for (i = 0; i < nthreads; i++) {
+    unsigned long long total_ops = 0;
+    for (i = 0; i < nthreads; i++)
         total_ops += threads_data[i].ops;
-        total_net_gain += threads_data[i].net_gain;
-        total_net_key_gain += threads_data[i].net_key_gain;
-    }
+
     //> Print results.
     double secs = timer_report_sec(wall_timer);
     double throughout = (double)total_ops / secs / 1000.0;
     printf("Nthreads: %d  Runtime(sec): %d  Workload: %d/%d/%d  Throughput(Kops/sec): %5.2lf\n",
            nthreads, RUNTIME, contains_pct, add_pct, remove_pct, throughout);
 
-    ll_print(ll);
-    printf(ll_is_sorted(ll) ? "Passed\n" : "Failed\n");
-    unsigned long long real_length = ll_length(ll), expected_length = list_size / 2 + total_net_gain;
-    printf(real_length == expected_length ? "Passed\n" : "Failed\n");
-    printf("Real length: %lld\nExpected length: %lld\n", real_length, expected_length);
-    unsigned long long real_key_sum = ll_key_sum(ll), expected_key_sum = (list_size / 2) * (list_size / 2 + 1) / 2 + total_net_key_gain;
-    printf(real_key_sum == expected_key_sum ? "Passed\n" : "Failed\n");
-    printf("Real key sum: %lld\nExpected key sum: %lld\n", real_key_sum, expected_key_sum);
-
+    // ll_print(ll);
     ll_free(ll);
     return EXIT_SUCCESS;
 }
@@ -151,17 +137,10 @@ void *thread_fn(void *targ) {
 
         if (op < contains_pct)
             ll_contains(ll, key);
-        else if (op < contains_pct + add_pct) {
-            if (ll_add(ll, key)) {
-                mydata->net_gain++;
-                mydata->net_key_gain += key;
-            }
-        } else {
-            if (ll_remove(ll, key)) {
-                mydata->net_gain--;
-                mydata->net_key_gain -= key;
-            }
-        }
+        else if (op < contains_pct + add_pct)
+            ll_add(ll, key);
+        else
+            ll_remove(ll, key);
 
         mydata->ops++;
         for (i = 0; i < 200; i++)

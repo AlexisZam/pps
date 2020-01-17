@@ -17,29 +17,37 @@ struct linked_list {
     ll_node_t *head;
 };
 
-typedef struct window {
+typedef struct {
     ll_node_t *prev;
     ll_node_t *curr;
 } window_t;
 
-static inline ll_node_t *get_next(ll_node_t *node) {
-    ll_node_t temp = *node;
-    temp.marked &= ~1;
-    return temp.next;
+static inline ll_node_t *get_next(ll_node_t *curr) {
+    ll_node_t node = *curr;
+    node.marked &= ~1;
+    return node.next;
 }
 
-static inline int get_marked(ll_node_t *node) {
-    return node->marked & 1;
+static inline int get_marked(ll_node_t *curr) {
+    return curr->marked & 1;
 }
 
-static inline int compare_and_set(ll_node_t *node, ll_node_t *expected_next, ll_node_t *new_next, uintptr_t expected_marked, uintptr_t new_marked) {
-    uintptr_t expected, new;
+static inline int compare_and_swap(ll_node_t *curr, ll_node_t *oldval_next, ll_node_t *newval_next, uintptr_t oldval_marked, uintptr_t newval_marked) {
+    ll_node_t oldval, newval;
 
-    expected = expected_marked ? (uintptr_t)expected_next | 1 : (uintptr_t)expected_next & ~1;
-    new = new_marked ? (uintptr_t)new_next | 1 : (uintptr_t)new_next & ~1;
-    return __sync_bool_compare_and_swap(&node->marked, expected, new);
+    oldval.next = oldval_next;
+    newval.next = newval_next;
+    if (oldval_marked)
+        oldval.marked |= 1;
+    else
+        oldval.marked &= ~1;
+    if (newval_marked)
+        newval.marked |= 1;
+    else
+        newval.marked &= ~1;
+
+    return __sync_bool_compare_and_swap(&curr->marked, oldval.marked, newval.marked);
 }
-
 /**
  * Create a new linked list node.
  **/
@@ -49,6 +57,7 @@ static ll_node_t *ll_node_new(int key) {
     XMALLOC(ret, 1);
     ret->key = key;
     ret->next = NULL;
+    ret->marked &= ~1;
 
     return ret;
 }
@@ -87,26 +96,23 @@ void ll_free(ll_t *ll) {
     XFREE(ll);
 }
 
-window_t find(ll_node_t *head, int key) {
+window_t find(ll_t *ll, int key) {
+    ll_node_t *prev, *curr, *next;
+    int marked;
+
 retry:
     for (;;) {
-        ll_node_t *prev, *curr, *next;
-        ll_node_t temp;
-        int marked;
-
-        prev = head;
+        prev = ll->head;
         curr = get_next(prev);
         for (;;) {
-            temp = *curr;
-            next = get_next(&temp);
-            marked = get_marked(&temp);
+            next = get_next(curr);
+            marked = get_marked(curr);
             while (marked) {
-                if (!compare_and_set(prev, curr, next, 0, 0))
+                if (!compare_and_swap(prev, curr, next, 0, 0))
                     goto retry;
                 curr = next;
-                temp = *curr;
-                next = get_next(&temp);
-                marked = get_marked(&temp);
+                next = get_next(curr);
+                marked = get_marked(curr);
             }
             if (curr->key >= key)
                 return (window_t){prev, curr};
@@ -118,48 +124,58 @@ retry:
 
 int ll_contains(ll_t *ll, int key) {
     ll_node_t *curr = ll->head;
+    int ret = 0;
 
     while (curr->key < key)
         curr = get_next(curr);
 
-    return key == curr->key && !get_marked(curr);
+    ret = (key == curr->key && !get_marked(curr));
+    return ret;
 }
 
 int ll_add(ll_t *ll, int key) {
-    ll_node_t *prev, *curr, *node;
+    int ret = 0;
+    ll_node_t *prev, *curr;
+    ll_node_t *new_node;
     window_t window;
 
     for (;;) {
-        window = find(ll->head, key);
+        window = find(ll, key);
         prev = window.prev;
         curr = window.curr;
 
-        if (curr->key == key)
-            return 0;
-        node = ll_node_new(key);
-        node->next = curr;
-        node->marked &= ~1;
-        if (compare_and_set(prev, curr, node, 0, 0))
-            return 1;
+        if (key != curr->key) {
+            new_node = ll_node_new(key);
+            new_node->next = curr;
+            new_node->marked &= ~1;
+            if (!compare_and_swap(prev, curr, new_node, 0, 0))
+                continue;
+            ret = 1;
+        }
+
+        return ret;
     }
 }
 
 int ll_remove(ll_t *ll, int key) {
+    int ret = 0;
     ll_node_t *prev, *curr, *next;
     window_t window;
 
     for (;;) {
-        window = find(ll->head, key);
+        window = find(ll, key);
         prev = window.prev;
         curr = window.curr;
 
-        if (curr->key != key)
-            return 0;
-        next = get_next(curr);
-        if (compare_and_set(curr, next, next, 0, 1)) {
-            compare_and_set(prev, curr, next, 0, 0);
-            return 1;
+        if (key == next->key) {
+            next = get_next(curr);
+            if (!compare_and_swap(curr, next, next, 0, 1))
+                continue;
+            ret = 1;
+            compare_and_swap(prev, curr, next, 0, 0);
         }
+
+        return ret;
     }
 }
 
@@ -188,9 +204,8 @@ int ll_is_sorted(ll_t *ll) {
     next = get_next(curr);
 
     while (next->key != INT_MAX) {
-        if (!get_marked(curr))
-            if (curr->key >= next->key)
-                return 0;
+        if (curr->key >= next->key)
+            return 0;
         curr = next;
         next = get_next(curr);
     }
@@ -199,24 +214,29 @@ int ll_is_sorted(ll_t *ll) {
 }
 
 unsigned long long ll_length(ll_t *ll) {
-    int length = 0;
-
-    for (ll_node_t *curr = ll->head; curr; curr = get_next(curr))
-        if (!get_marked(curr))
-            length++;
-
-    return length - 2;
-}
-
-unsigned long long ll_key_sum(ll_t *ll) {
-    unsigned long long key_sum = 0;
     ll_node_t *curr = ll->head;
+    int ret = 0;
+
+    curr = get_next(curr);
 
     while (curr->key != INT_MAX) {
-        if (!get_marked(curr))
-            key_sum += curr->key;
+        ret++;
         curr = get_next(curr);
     }
 
-    return key_sum + 1;
+    return ret;
+}
+
+unsigned long long ll_sum_of_keys(ll_t *ll) {
+    ll_node_t *curr = ll->head;
+    int ret = 0;
+
+    curr = get_next(curr);
+
+    while (curr->key != INT_MAX) {
+        ret += curr->key;
+        curr = get_next(curr);
+    }
+
+    return ret;
 }
