@@ -98,6 +98,7 @@ void ll_free(ll_t *ll) {
 
 window_t find(ll_t *ll, int key) {
     ll_node_t *prev, *curr, *next;
+    ll_node_t node;
     int marked;
 
 retry:
@@ -105,14 +106,16 @@ retry:
         prev = ll->head;
         curr = get_next(prev);
         for (;;) {
-            next = get_next(curr);
-            marked = get_marked(curr);
+            node = *curr;
+            next = get_next(&node);
+            marked = get_marked(&node);
             while (marked) {
                 if (!compare_and_swap(prev, curr, next, 0, 0))
                     goto retry;
                 curr = next;
-                next = get_next(curr);
-                marked = get_marked(curr);
+                node = *curr;
+                next = get_next(&node);
+                marked = get_marked(&node);
             }
             if (curr->key >= key)
                 return (window_t){prev, curr};
