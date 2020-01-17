@@ -102,44 +102,4 @@ static int ll_add(ll_t *ll, int key) {
     return ret;
 }
 
-/**
- * Remove a key from a linked list.
- **/
-static int ll_remove(ll_t *ll, int key) {
-    int ret = 0;
-    ll_node_t *curr, *next;
-
-    curr = ll->head;
-    next = curr->next;
-
-    while (next->key < key) {
-        curr = next;
-        next = curr->next;
-    }
-
-    if (key == next->key) {
-        ret = 1;
-        curr->next = next->next;
-        ll_node_free(next);
-    }
-
-    return ret;
-}
-
-/**
- * Print a linked list.
- **/
-static void ll_print(ll_t *ll) {
-    ll_node_t *curr = ll->head;
-    printf("LIST [");
-    while (curr) {
-        if (curr->key == INT_MAX)
-            printf(" -> MAX");
-        else
-            printf(" -> %d", curr->key);
-        curr = curr->next;
-    }
-    printf(" ]\n");
-}
-
 #endif /* LL_SERIAL_H */
