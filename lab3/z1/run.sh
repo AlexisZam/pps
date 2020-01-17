@@ -4,7 +4,7 @@
 #PBS -o run.out
 #PBS -e run.err
 #PBS -l nodes=sandman:ppn=64
-#PBS -l walltime=00:10:00
+#PBS -l walltime=00:30:00
 
 cd /home/parallel/parlab02/pps/lab3/z1
 i=1
