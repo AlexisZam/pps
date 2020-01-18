@@ -171,7 +171,7 @@ int ll_remove(ll_t *ll, int key) {
         prev = window.prev;
         curr = window.curr;
 
-        if (key == next->key) {
+        if (key == curr->key) {
             next = get_next(curr);
             if (!compare_and_swap(curr, next, next, 0, 1))
                 continue;
@@ -219,7 +219,7 @@ int ll_is_sorted(ll_t *ll) {
 
 unsigned long long ll_length(ll_t *ll) {
     ll_node_t *curr = ll->head;
-    int ret = 0;
+    unsigned long long ret = 0;
 
     curr = get_next(curr);
 
@@ -233,7 +233,7 @@ unsigned long long ll_length(ll_t *ll) {
 
 unsigned long long ll_sum_of_keys(ll_t *ll) {
     ll_node_t *curr = ll->head;
-    int ret = 0;
+    unsigned long long ret = 0;
 
     curr = get_next(curr);
 

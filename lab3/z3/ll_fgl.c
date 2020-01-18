@@ -178,7 +178,7 @@ int ll_is_sorted(ll_t *ll) {
 
 unsigned long long ll_length(ll_t *ll) {
     ll_node_t *curr = ll->head;
-    int ret = 0;
+    unsigned long long ret = 0;
 
     curr = curr->next;
 
@@ -192,7 +192,7 @@ unsigned long long ll_length(ll_t *ll) {
 
 unsigned long long ll_sum_of_keys(ll_t *ll) {
     ll_node_t *curr = ll->head;
-    int ret = 0;
+    unsigned long long ret = 0;
 
     curr = curr->next;
 
