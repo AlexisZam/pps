@@ -120,14 +120,13 @@ int ll_add(ll_t *ll, int key) {
 
         pthread_spin_lock(&curr->lock);
         pthread_spin_lock(&next->lock);
-        if ((validated = validate(ll, curr, next))) {
+        if ((validated = validate(ll, curr, next)))
             if (key != next->key) {
                 ret = 1;
                 new_node = ll_node_new(key);
                 new_node->next = next;
                 curr->next = new_node;
             }
-        }
         pthread_spin_unlock(&curr->lock);
         pthread_spin_unlock(&next->lock);
 
@@ -152,12 +151,11 @@ int ll_remove(ll_t *ll, int key) {
 
         pthread_spin_lock(&curr->lock);
         pthread_spin_lock(&next->lock);
-        if ((validated = validate(ll, curr, next))) {
+        if ((validated = validate(ll, curr, next)))
             if (key == next->key) {
                 ret = 1;
                 curr->next = next->next;
             }
-        }
         pthread_spin_unlock(&curr->lock);
         pthread_spin_unlock(&next->lock);
 
