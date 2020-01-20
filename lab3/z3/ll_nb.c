@@ -90,7 +90,7 @@ ll_t *ll_new() {
 void ll_free(ll_t *ll) {
     ll_node_t *next, *curr = ll->head;
     while (curr) {
-        next = curr->next;
+        next = get_next(curr);
         ll_node_free(curr);
         curr = next;
     }
