@@ -66,6 +66,10 @@ void ll_free(ll_t *ll) {
     XFREE(ll);
 }
 
+int validate(ll_node_t *curr, ll_node_t *next) {
+    return !curr->marked && !next->marked && next == curr->next;
+}
+
 int ll_contains(ll_t *ll, int key) {
     ll_node_t *curr = ll->head;
     int ret = 0;
@@ -75,10 +79,6 @@ int ll_contains(ll_t *ll, int key) {
 
     ret = (key == curr->key && !curr->marked);
     return ret;
-}
-
-int validate(ll_node_t *curr, ll_node_t *next) {
-    return !curr->marked && !next->marked && next == curr->next;
 }
 
 int ll_add(ll_t *ll, int key) {
@@ -123,7 +123,7 @@ int ll_remove(ll_t *ll, int key) {
         curr = ll->head;
         next = curr->next;
 
-        while (next->key <= key) {
+        while (next->key < key) {
             curr = next;
             next = curr->next;
         }
@@ -133,7 +133,7 @@ int ll_remove(ll_t *ll, int key) {
         if ((validated = validate(curr, next))) {
             if (key == next->key) {
                 ret = 1;
-                curr->marked = 1;
+                next->marked = 1;
                 curr->next = next->next;
             }
         }
