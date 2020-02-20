@@ -12,7 +12,7 @@
  */
 __global__ void dmm_gpu_naive(const value_t *A, const value_t *B, value_t *C,
                               const size_t M, const size_t N, const size_t K) {
-  /*
+    /*
    * FILLME: fill the code.
    */
 }
@@ -21,9 +21,9 @@ __global__ void dmm_gpu_naive(const value_t *A, const value_t *B, value_t *C,
  *  Coalesced memory acceses of A.
  */
 __global__ void dmm_gpu_coalesced_A(const value_t *A, const value_t *B,
-				    value_t *C, const size_t M, const size_t N,
-				    const size_t K) {
-  /*
+                                    value_t *C, const size_t M, const size_t N,
+                                    const size_t K) {
+    /*
    * FILLME: fill the code.
    */
 }
@@ -32,8 +32,8 @@ __global__ void dmm_gpu_coalesced_A(const value_t *A, const value_t *B,
  *  Reduced memory accesses.
  */
 __global__ void dmm_gpu_reduced_global(const value_t *A, const value_t *B, value_t *C,
-				       const size_t M, const size_t N, const size_t K) {
-  /*
+                                       const size_t M, const size_t N, const size_t K) {
+    /*
    * FILLME: fill the code.
    */
 }
@@ -42,8 +42,8 @@ __global__ void dmm_gpu_reduced_global(const value_t *A, const value_t *B, value
  *  Use of cuBLAS
  */
 void dmm_gpu_cublas(const value_t *A, const value_t *B, value_t *C,
-		    const size_t M, const size_t N, const size_t K) {
-  /*
+                    const size_t M, const size_t N, const size_t K) {
+    /*
    * FILLME: fill the code.
    */
 }
