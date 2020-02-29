@@ -8,6 +8,7 @@
 #define ALLOC_H
 
 #include "decls.h"
+#include <stddef.h>
 
 __BEGIN_C_DECLS
 

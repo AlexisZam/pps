@@ -86,6 +86,12 @@ int main(int argc, char **argv) {
    *          only) the matrix size here if that helps you with your
    *          kernel code, e.g., to avoid divergent warps.
    */
+    if (N % THREAD_BLOCK_X)
+        N = (N / THREAD_BLOCK_X + 1) * THREAD_BLOCK_X;
+    if (M % THREAD_BLOCK_Y)
+        M = (M / THREAD_BLOCK_Y + 1) * THREAD_BLOCK_Y;
+    if (K % TILE_Y)
+        K = (K / TILE_Y + 1) * TILE_Y;
 
     printf("Dimension M: %zd\n", orig_M);
     printf("Adjusted dimension M: %zd\n", M);
@@ -133,8 +139,8 @@ int main(int argc, char **argv) {
    *          Use THREAD_BLOCK_X, THREAD_BLOCK_Y, TILE_X, TILE_Y
    *          which are defined at compile time.
    */
-    dim3 gpu_block(1, 1); // FILLME: set up the thread block dimensions
-    dim3 gpu_grid(1, 1);  // FILLME: set up the grid dimensions
+    dim3 gpu_block(THREAD_BLOCK_X, THREAD_BLOCK_Y);        // FILLME: set up the thread block dimensions
+    dim3 gpu_grid(N / THREAD_BLOCK_X, M / THREAD_BLOCK_Y); // FILLME: set up the grid dimensions
 
     printf(">>>> Begin of record <<<<\n");
     printf("Block dimensions: %dx%d\n", gpu_block.x, gpu_block.y);
@@ -175,10 +181,10 @@ int main(int argc, char **argv) {
     if (kernel == GPU_CUBLAS) {
         for (size_t i = 0; i < NR_ITER; ++i)
             /* FILLME: you might need to change the arguments */
-            gpu_kernels[kernel].fn(gpu_A,
-                                   gpu_B,
+            gpu_kernels[kernel].fn(gpu_B,
+                                   gpu_A,
                                    gpu_C,
-                                   M, N, K);
+                                   N, M, K);
     } else {
         for (size_t i = 0; i < NR_ITER; ++i)
             gpu_kernels[kernel].fn<<<gpu_grid, gpu_block>>>(gpu_A,

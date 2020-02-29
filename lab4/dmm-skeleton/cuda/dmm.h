@@ -31,6 +31,10 @@
 #define TILE_Y 32
 #endif
 
+#ifndef BLOCK_SIZE
+#define BLOCK_SIZE 32
+#endif
+
 __BEGIN_C_DECLS
 
 void dmm_serial(const value_t *const *A, const value_t *const *B, value_t **C,

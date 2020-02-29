@@ -11,9 +11,9 @@ RM = /bin/rm
 
 # Fermi GPUs in termis
 nvcc_backend = gcc
-nvcc_arch = -arch sm_35
+nvcc_arch = -arch sm_30
 
-MAKE_CPPFLAGS = -D__FLOAT_VALUES -DEPS=1e-5 -I../common
+MAKE_CPPFLAGS = -D__FLOAT_VALUES -DEPS=1e-4 -I../common
 MAKE_CFLAGS = -c -Wall -std=gnu99
 MAKE_GPU_CPPFLAGS = -I$(CUDA_PREFIX)/include
 MAKE_GPU_CFLAGS = -c -ccbin $(nvcc_backend) $(nvcc_arch)
