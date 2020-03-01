@@ -36,7 +36,7 @@ __global__ void dmm_gpu_coalesced_A(const value_t *A, const value_t *B,
     value_t _Cij = 0;
 
     for (int m = 0; m < K; m += TILE_X) {
-        __shared__ value_t As[TILE_Y][TILE_X];
+        __shared__ value_t As[THREAD_BLOCK_Y][TILE_X];
 
         for (int n = threadIdx.x; n < TILE_X; n += blockDim.x)
             As[threadIdx.y][n] = A[i * K + n + m];
@@ -62,8 +62,8 @@ __global__ void dmm_gpu_reduced_global(const value_t *A, const value_t *B, value
 
     value_t _Cij = 0;
     for (int m = 0; m < K; m += TILE_X / 2) {
-        __shared__ value_t As[TILE_Y][TILE_X / 2];
-        __shared__ value_t Bs[TILE_X / 2][TILE_Y];
+        __shared__ value_t As[THREAD_BLOCK_Y][TILE_X / 2];
+        __shared__ value_t Bs[TILE_X / 2][THREAD_BLOCK_X];
 
         for (int n = threadIdx.x; n < TILE_X / 2; n += blockDim.x)
             As[threadIdx.y][n] = A[i * K + n + m];
