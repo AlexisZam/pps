@@ -41,16 +41,15 @@ __global__ void dmm_gpu_coalesced_A(const value_t *A, const value_t *B,
 
     value_t _Cij = 0;
 
-#define BLOCK_SIZE TILE_X
-    for (int m = 0; m < K; m += BLOCK_SIZE) {
-        __shared__ value_t As[THREAD_BLOCK_Y][BLOCK_SIZE];
+    for (int m = 0; m < K; m += TILE_X) {
+        __shared__ value_t As[THREAD_BLOCK_Y][TILE_X];
 
-        for (int n = threadIdx.x; n < BLOCK_SIZE; n += blockDim.x)
+        for (int n = threadIdx.x; n < TILE_X; n += blockDim.x)
             As[threadIdx.y][n] = A[i * K + n + m];
 
         __syncthreads();
 
-        for (int k = 0; k < BLOCK_SIZE; ++k)
+        for (int k = 0; k < TILE_X; ++k)
             _Cij += As[threadIdx.y][k] * B[(k + m) * N + j];
 
         __syncthreads();
@@ -67,24 +66,22 @@ __global__ void dmm_gpu_reduced_global(const value_t *A, const value_t *B, value
     /*
    * FILLME: fill the code.
    */
-    int i = blockIdx.y * BLOCK_SIZE + threadIdx.y;
-    int j = blockIdx.x * BLOCK_SIZE + threadIdx.x;
+    int i = blockIdx.y * blockDim.y + threadIdx.y;
+    int j = blockIdx.x * blockDim.x + threadIdx.x;
 
     value_t _Cij = 0;
+    for (int m = 0; m < K; m += TILE_X) {
+        __shared__ value_t As[THREAD_BLOCK_Y][TILE_X];
+        __shared__ value_t Bs[TILE_X][THREAD_BLOCK_X];
 
-#define BLOCK_SIZE (TILE_X / 2)
-    for (int m = 0; m < K; m += BLOCK_SIZE) {
-        __shared__ value_t As[THREAD_BLOCK_Y][BLOCK_SIZE];
-        __shared__ value_t Bs[BLOCK_SIZE][THREAD_BLOCK_X];
-
-        for (int n = threadIdx.x; n < BLOCK_SIZE; n += blockDim.x)
+        for (int n = threadIdx.x; n < TILE_X; n += blockDim.x)
             As[threadIdx.y][n] = A[i * K + n + m];
-        for (int n = threadIdx.y; n < BLOCK_SIZE; n += blockDim.y)
+        for (int n = threadIdx.y; n < TILE_X; n += blockDim.y)
             Bs[n][threadIdx.x] = B[(n + m) * N + j];
 
         __syncthreads();
 
-        for (int k = 0; k < BLOCK_SIZE; ++k)
+        for (int k = 0; k < TILE_X; ++k)
             _Cij += As[threadIdx.y][k] * Bs[k][threadIdx.x];
 
         __syncthreads();
