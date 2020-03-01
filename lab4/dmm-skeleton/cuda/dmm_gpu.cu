@@ -13,6 +13,9 @@
  */
 __global__ void dmm_gpu_naive(const value_t *A, const value_t *B, value_t *C,
                               const size_t M, const size_t N, const size_t K) {
+    /*
+   * FILLME: fill the code.
+   */
     int i = blockIdx.y * blockDim.y + threadIdx.y;
     int j = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -30,6 +33,9 @@ __global__ void dmm_gpu_naive(const value_t *A, const value_t *B, value_t *C,
 __global__ void dmm_gpu_coalesced_A(const value_t *A, const value_t *B,
                                     value_t *C, const size_t M, const size_t N,
                                     const size_t K) {
+    /*
+   * FILLME: fill the code.
+   */
     int i = blockIdx.y * blockDim.y + threadIdx.y;
     int j = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -57,6 +63,9 @@ __global__ void dmm_gpu_coalesced_A(const value_t *A, const value_t *B,
  */
 __global__ void dmm_gpu_reduced_global(const value_t *A, const value_t *B, value_t *C,
                                        const size_t M, const size_t N, const size_t K) {
+    /*
+   * FILLME: fill the code.
+   */
     int i = blockIdx.y * blockDim.y + threadIdx.y;
     int j = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -86,6 +95,9 @@ __global__ void dmm_gpu_reduced_global(const value_t *A, const value_t *B, value
  */
 void dmm_gpu_cublas(const value_t *A, const value_t *B, value_t *C,
                     const size_t M, const size_t N, const size_t K) {
+    /*
+   * FILLME: fill the code.
+   */
     const float alpha = 1, beta = 0;
 
     cublasHandle_t handle;
