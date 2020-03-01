@@ -70,6 +70,7 @@ __global__ void dmm_gpu_reduced_global(const value_t *A, const value_t *B, value
     int j = blockIdx.x * blockDim.x + threadIdx.x;
 
     value_t _Cij = 0;
+
     for (int m = 0; m < K; m += TILE_X / 2) {
         __shared__ value_t As[THREAD_BLOCK_Y][TILE_X / 2];
         __shared__ value_t Bs[TILE_X / 2][THREAD_BLOCK_X];
