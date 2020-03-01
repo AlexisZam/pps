@@ -24,15 +24,11 @@
 
 // Tile dimensions
 #ifndef TILE_X
-#define TILE_X 32
+#define TILE_X 192
 #endif
 
 #ifndef TILE_Y
-#define TILE_Y 32
-#endif
-
-#ifndef BLOCK_SIZE
-#define BLOCK_SIZE 32
+#define TILE_Y THREAD_BLOCK_Y
 #endif
 
 __BEGIN_C_DECLS

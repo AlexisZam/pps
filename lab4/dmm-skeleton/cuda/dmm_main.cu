@@ -90,8 +90,8 @@ int main(int argc, char **argv) {
         N = (N / THREAD_BLOCK_X + 1) * THREAD_BLOCK_X;
     if (M % THREAD_BLOCK_Y)
         M = (M / THREAD_BLOCK_Y + 1) * THREAD_BLOCK_Y;
-    if (K % TILE_Y)
-        K = (K / TILE_Y + 1) * TILE_Y;
+    if (K % TILE_X)
+        K = (K / TILE_X + 1) * TILE_X;
 
     printf("Dimension M: %zd\n", orig_M);
     printf("Adjusted dimension M: %zd\n", M);
